@@ -1,5 +1,8 @@
 # ==================================================================
 import random
+from surface_noise import generate_noise
+from perlin import Perlin
+from config import vi, vj, z
 
 
 class DayTracker:
@@ -41,13 +44,13 @@ class Epoch:
 
 
 class Grid:
-    def __init__(self):
-        self.width = 0
-        self.height = 0
+    def __init__(self, grid_size):
+        self.width = grid_size[0]
+        self.height = grid_size[1]
         self.ents = []
         self.rmv_ents = 0
         self.occupied_positions = set()
-        self.surface = None
+        self.surface = generate_noise(grid_size,grid_size,vi,vj,z)
         self.resource_points = None
 
     def gen_res_pnt(self, num_points):
@@ -79,23 +82,43 @@ class Grid:
 
         return closest_resource_point[ 'x' ], closest_resource_point[ 'y' ]
 
+    def get_distance_to_nearest_res_pnt(self, entity_x, entity_y):
+        # Initialize minimum distance
+        min_distance = float('inf')
+
+        # Iterate through each resource point to find the closest one
+        for resource in self.resource_points:
+            # Calculate the Euclidean distance from the entity to this resource point
+            distance = self.calc_dist(entity_x, entity_y, resource[0], resource[1])
+
+            # If this resource point is closer than the previous closest, update min_distance
+            if distance < min_distance:
+                min_distance = distance
+
+        return min_distance
+
     def get_nearest_prey(self, entity):
         # Initialize minimum distance and closest prey variables
         min_distance = float('inf')
         closest_prey = None
 
-        # Iterate through each prey to find the closest one
+        # Define the boundaries of the 5x5 grid around the entity
+        min_x, max_x = entity.loc['x'] - 2, entity.loc['x'] + 2
+        min_y, max_y = entity.loc['y'] - 2, entity.loc['y'] + 2
+
+        # Iterate through each prey to find the closest one within the 5x5 grid
         for prey in self.ents:
-            if not prey.is_z:
+            if not prey.is_z and min_x <= prey.loc['x'] <= max_x and min_y <= prey.loc['y'] <= max_y:
                 # Calculate the Euclidean distance from the entity to this prey
-                distance = self.calc_dist(entity.loc[ 'x' ], entity.loc[ 'y' ], prey.loc[ 'x' ], prey.loc[ 'y' ])
+                distance = self.calc_dist(entity.loc['x'], entity.loc['y'], prey.loc['x'], prey.loc['y'])
 
                 # If this prey is closer than the previous closest, update min_distance and closest_prey
                 if distance < min_distance:
                     min_distance = distance
                     closest_prey = prey
 
-        return closest_prey
+        # Return the x and y coordinates of the closest prey
+        return (closest_prey.loc['x'], closest_prey.loc['y']) if closest_prey else None
 
     @staticmethod
     def calc_dist(x1, y1, x2, y2):
@@ -146,7 +169,7 @@ class Grid:
     def remove_inactive_ents(self):
         self.ents = [ent for ent in self.ents if ent.is_active]
         # add to the number of beings removed the number self.beings list gains
-        self.occupied_positions = {(ent.x, ent.y) for ent in self.ents}
+        self.occupied_positions = {(ent.loc['x'], ent.loc['y']) for ent in self.ents}
 
     # def count_humans_and_zombies(self):
     #     humans = sum(1 for being in self.beings if not being.is_zombie and being.is_active)

@@ -4,20 +4,29 @@
 # that occur during the game. The log() method is used to add a new encounter record to the log,
 # and the display_logs() method is used to print all the encounter records to the console.
 
-class EncRecord:
-	def __init__(self, human, other, action, human_res, other_res):
-		self.human = human
-		self.other = other
-		self.action = action
-		self.human_res = human
-		self.other_res = other
+from env import Grid
 
-	def __str__(self):
-		return f"{self.human} {self.action} {self.other} with {self.human_res} and {self.other_res} resources"
+# ==================================================================
+
+
+class EncRecord:
+    def __init__(self, ent, other, action):
+        self.ent = ent
+        self.other = other
+        self.action = action
+        self.ent_loc = ent.loc
+        self.other_loc = other.loc
+        self.dist_to_res_pnt = ent.grid.get_distance_to_nearest_res_pnt(ent.loc['x'], ent.loc['y'])
+
+    def __str__(self):
+        return f"{self.human} {self.action} {self.other}, distance to nearest resource point: {self.dist_to_res_pnt}"
+
 
 # ==================================================================
 
 #create a class for logging EncRecords, singleton pattern
+
+
 class EncLog:
 	_instance = None
 
@@ -71,6 +80,7 @@ class MoveLog:
 
 # ResRecord class to log resource change of ents, singleton pattern, being id, res change amount, reason for change
 
+
 class ResRecord:
 	def __init__(self, entity, res_change, reason):
 		self.entity = entity
@@ -100,3 +110,43 @@ class ResLog:
 	def display_logs(self):
 		for log in self.logs:
 			print(log)
+
+# ==================================================================
+
+
+class GrpRecord:
+    def __init__(self, group, member, action, reason):
+        self.group = group
+        self.member = member
+        self.action = action
+        self.reason = reason
+
+    def __str__(self):
+        return f"Member {self.member.id} was {self.action} to group {self.group.id}"
+
+# ==================================================================
+
+
+class GrpLog:
+	_instance = None
+
+	def __new__(cls):
+		if cls._instance is None:
+			cls._instance = super(GrpLog, cls).__new__(cls)
+			cls._instance.logs = []
+		return cls._instance
+
+	def log(self, group_record):
+		self.logs.append(group_record)
+
+	def display_logs(self):
+		for log in self.logs:
+			print(log)
+
+# ==================================================================
+
+
+ml = MoveLog()
+rl = ResLog()
+el = EncLog()
+gl = GrpLog()
