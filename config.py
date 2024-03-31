@@ -1,6 +1,6 @@
 import random
 
-log_path = "logs/"
+log_path = r"C:\Users\TR\Desktop\results"
 
 inf_rate = 0.3
 

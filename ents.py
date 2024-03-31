@@ -2,7 +2,7 @@ import random
 
 from env import Grid
 from util import id_generator
-from log import ml, gl, el, rl
+from log import ml, gl, el, rl, MoveRecord, ResRecord
 from config import start_res, start_ttd, grid_size, max_res_gain
 
 
@@ -50,6 +50,7 @@ class Human(Entity):
         self.att['res'] = res
 
     def move(self):
+        old_loc = self.loc.copy()
         if self.grp and self.prob_move_grp():
             self.move_grp()
         elif self.prob_move_res():
@@ -57,9 +58,16 @@ class Human(Entity):
         else:
             self.move_rand()
 
+        mr = MoveRecord(self, old_loc, self.loc)
+        ml.log(mr)
+
         self.replenish_resources()
         self.distribute_resources()
+
         self.att['res'] -= .5
+
+        rr = ResRecord(self, -0.5, 'move')
+        rl.log(rr)
 
     def prob_move_res(self):
         return random.random() < (1 - self.att['res'] / 10)
@@ -150,11 +158,19 @@ class Zombie(Entity):
         super().__init__()
         self.att['ttd'] = ttd
 
+
     def move(self):
-        if self.prob_move_prey():
+        og_loc = self.loc.copy()
+
+        if self.grp and self.prob_move_grp():
+            self.move_grp()
+        elif self.prob_move_prey():
             self.move_prey()
         else:
             self.move_rand()
+
+        rec = MoveRecord(self, og_loc, self.loc)
+        ml.log(rec)
 
         self.att['ttd'] -= 1.5
 
@@ -181,6 +197,7 @@ class Zombie(Entity):
         # Update location
         self.loc[ 'x' ] += dx
         self.loc[ 'y' ] += dy
+
 
     def move_grp(self):
         # Calculate the average position of the group
@@ -232,12 +249,12 @@ class Group:
 
     def add_member(self, entity):
         self.members.append(entity)
-        gl.log(entity, self, 'add')
+        gl.log(self, entity, 'add')
 
     def remove_member(self, entity):
         for member in self.members:
             if member.is_z == entity.is_z and member.id == entity.id:
-                gl.log(entity, self, 'remove')
+                gl.log(self, entity, 'remove')
                 self.members.remove(member)
                 break
 
