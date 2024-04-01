@@ -18,7 +18,7 @@ class Entity:
         self.att = {'res': 0, 'ttd': 0}  # Default attributes
         self.is_z = False  # Default zombie flag
         self.is_active = True  # Default active flag
-        self.enc = {'luv': 0, 'war': 0, 'rob': 0, 'esc': 0, 'win': 0}  # Default encounters
+        self.enc = {'luv': 0, 'war': 0, 'rob': 0, 'esc': 0, 'win': 0, 'inf': 0}  # Default encounters
         self.xp = {'luv': 0, 'war': 0, 'rob': 0, 'esc': 0, 'win': 0}
         self.node = {'human': False, 'zombie': False}  # Default node flags
         self.grp = {}  # Default groups, group ids held as keys
@@ -291,10 +291,12 @@ class Zombie(Entity):
 
 
 class Group:
+    groups = []
     def __init__(self):
         self.id = id_generator.gen_id()
         entities[self.id] = self
         self.members = []
+        Group.groups.append(self)
 
     def add_member(self, entity):
         self.members.append(entity)
@@ -304,7 +306,7 @@ class Group:
             if member_id in entities:
                 member = entities[member_id]
                 if member.is_z == entity.is_z and member.id == entity.id:
-                    gl.log(self, entity, 'remove')
+                    gl.log(self, entity, 'remove', 'turned' if entity.is_z else 'died')
                     self.members.remove(member)
                     break
 

@@ -54,3 +54,5 @@ def write_logs_to_csv(log, log_type):
             writer.writerow(["Epoch", "Day", "Group", "Entity", "Action", "Reason"])
             for record in log.logs:
                 writer.writerow(str(record).split(','))  # Convert the record object to a string and split it into a list
+        elif log_type == "metrics":
+            log.write_to_csv(log_path, log_type + "_log.csv")

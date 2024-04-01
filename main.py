@@ -11,8 +11,8 @@ def main():
     # Initialize the simulation
     sim = Simulation()
 
-    # Run the simulation
-    sim.run()
+    # Run the simulation and get the metrics DataFrame
+    metrics = sim.run()
 
     # Generate a unique folder name using the current timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -37,6 +37,9 @@ def main():
     grp_df = pd.DataFrame([str(record).split(',') for record in gl.logs],
                           columns=["Epoch", "Day", "Group", "Entity", "Action", "Reason"])
     grp_df.to_csv(os.path.join(new_log_path, "grp_log.csv"), index=False)
+
+    # Write the metrics DataFrame to a CSV file
+    metrics.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
 
 
 if __name__ == '__main__':
