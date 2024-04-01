@@ -63,7 +63,7 @@ class Human(Entity):
             else:
                 self.move_rand()
 
-            ml.log(self, old_loc, self.loc)
+            ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
             self.replenish_resources()
             self.distribute_resources()
@@ -184,7 +184,6 @@ class Human(Entity):
 
 
 class Zombie(Entity):
-
     def __init__(self, ttd=start_ttd):
         super().__init__()
         self.att['ttd'] = ttd
@@ -196,7 +195,7 @@ class Zombie(Entity):
             self.is_active = False
             return  # Zombie has run out of time to decay
 
-        og_loc = self.loc.copy()
+        old_loc = self.loc.copy()
 
         if self.grp and self.prob_move_grp():
             self.move_grp()
@@ -205,7 +204,7 @@ class Zombie(Entity):
         else:
             self.move_rand()
 
-        ml.log(entity=self, old_loc=og_loc, new_loc=self.loc)
+        ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
         self.att['ttd'] -= 1.5
 
@@ -299,15 +298,15 @@ class Group:
 
     def add_member(self, entity):
         self.members.append(entity)
-        gl.log(self, entity, 'add')
 
     def remove_member(self, entity):
-        for member in self.members:
-            member = entities[member.id]
-            if member.is_z == entity.is_z and member.id == entity.id:
-                gl.log(self, entity, 'remove')
-                self.members.remove(member)
-                break
+        for member_id in self.members:
+            if member_id in entities:
+                member = entities[member_id]
+                if member.is_z == entity.is_z and member.id == entity.id:
+                    gl.log(self, entity, 'remove')
+                    self.members.remove(member)
+                    break
 
     def interact(self, other):
         from events import interact  # Import the interact function from events.py

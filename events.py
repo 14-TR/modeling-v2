@@ -9,6 +9,10 @@ def interact(ent1, ent2):
     if not ent1.is_adjacent(ent2):
         return
 
+    # Check if both entities are zombies
+    if ent1.is_z and ent2.is_z:
+        return  # Skip interaction if both entities are zombies
+
     if ent1.is_z or ent2.is_z:
         if not ent1.is_z:
             human, zombie = ent1, ent2

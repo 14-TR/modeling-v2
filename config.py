@@ -8,6 +8,10 @@ start_res = random.randint(10, 20)
 
 start_ttd = random.randint(10, 20)
 
+ttd_rate = 1.5
+
+res_lose_rate = 1
+
 max_res_gain = 5
 
 size = 50
@@ -17,13 +21,13 @@ vi = 0.025
 vj = 0.025
 z = 4
 
-num_humans = 10
+num_humans = 100
 
-num_zombies = 5
+num_zombies = 1
 
 epochs = 1
 
-days = 365
+days = 500
 
 loser_survival_rate = 0.25  # The loser keeps % of their resources
 

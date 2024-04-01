@@ -10,20 +10,23 @@ class EncRecord:
         # self.other_loc = other.loc
         self.action = action
 
-    # def __str__(self):
-    #     return f"{self.epoch},{self.day},{self.ent_id},{self.ent_loc},{self.other_id},{self.other_loc},{self.action}"
+    def __str__(self):
+        return f"{self.epoch},{self.day},{self.ent_id},{self.other_id},{self.action}"
 
 class MoveRecord:
-    def __init__(self, ent, old_loc, new_loc):
+    def __init__(self, ent, old_loc_x, old_loc_y, old_loc_z, new_loc_x, new_loc_y, new_loc_z):
         self.epoch = Epoch.get_current_epoch()
         self.day = DayTracker.get_current_day()
         self.entity_id = ent.id
-        # self.entity_loc = ent.loc
-        self.old_loc = old_loc
-        self.new_loc = new_loc
+        self.old_loc_x = old_loc_x
+        self.old_loc_y = old_loc_y
+        self.old_loc_z = old_loc_z
+        self.new_loc_x = new_loc_x
+        self.new_loc_y = new_loc_y
+        self.new_loc_z = new_loc_z
 
-    # def __str__(self):
-    #     return f"{self.epoch},{self.day},{self.entity_id},{self.entity_loc},{self.old_loc},{self.new_loc}"
+    def __str__(self):
+        return f"{self.epoch},{self.day},{self.entity_id},{self.old_loc_x},{self.old_loc_y},{self.old_loc_z},{self.new_loc_x},{self.new_loc_y},{self.new_loc_z}"
 
 class ResRecord:
     def __init__(self, ent, res_change=0, reason=None):
@@ -35,20 +38,20 @@ class ResRecord:
         self.current_res = ent.att['res']
         self.reason = reason
 
-    # def __str__(self):
-    #     return f"{self.epoch},{self.day},{self.entity_id},{self.entity_loc},{self.res_change},{self.current_res},{self.reason}"
+    def __str__(self):
+        return f"{self.epoch},{self.day},{self.entity_id},{self.res_change},{self.current_res},{self.reason}"
 
 class GrpRecord:
     def __init__(self, grp, member, action, reason):
         self.epoch = Epoch.get_current_epoch()
         self.day = DayTracker.get_current_day()
         self.group_id = grp.id
-        self.member_id = member.id
+        self.member_id = member
         self.action = action
         self.reason = reason
 
-    # def __str__(self):
-    #     return f"{self.epoch},{self.day},{self.group_id},{self.member_id},{self.action},{self.reason}"
+    def __str__(self):
+        return f"{self.epoch},{self.day},{self.group_id},{self.member_id},{self.action},{self.reason}"
 
 class EncLog:
     _instance = None
@@ -67,6 +70,7 @@ class EncLog:
         for log in self.logs:
             print(str(log))
 
+
 class MoveLog:
     _instance = None
 
@@ -76,13 +80,14 @@ class MoveLog:
             cls._instance.logs = []
         return cls._instance
 
-    def log(self, entity, old_loc, new_loc):
-        record = MoveRecord(entity, old_loc, new_loc)
+    def log(self, entity, old_loc_x, old_loc_y, old_loc_z, new_loc_x, new_loc_y, new_loc_z):
+        record = MoveRecord(entity, old_loc_x, old_loc_y, old_loc_z, new_loc_x, new_loc_y, new_loc_z)
         self.logs.append(record)
 
     def display_logs(self):
         for log in self.logs:
             print(str(log))
+
 
 class ResLog:
     _instance = None
@@ -101,6 +106,7 @@ class ResLog:
         for log in self.logs:
             print(str(log))
 
+
 class GrpLog:
     _instance = None
 
@@ -117,6 +123,7 @@ class GrpLog:
     def display_logs(self):
         for log in self.logs:
             print(str(log))
+
 
 ml = MoveLog()
 rl = ResLog()

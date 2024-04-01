@@ -36,7 +36,7 @@ def write_logs_to_csv(log, log_type):
         writer = csv.writer(file)
         if log_type == "move":
             writer.writerow(
-                ["Epoch", "Day", "Entity", "Old Location X", "Old Location Y", "New Location X", "New Location Y"])
+                ["Epoch", "Day", "Entity", "Old Location X", "Old Location Y", "Old Z", "New Location X", "New Location Y", "New Z"])
             for record in log.logs:
                 writer.writerow(
                     str(record).split(','))  # Convert the record object to a string and split it into a list
