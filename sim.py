@@ -6,6 +6,7 @@ from config import grid_size, num_humans, num_zombies, epochs, days
 from events import interact
 from log import el
 
+
 class Simulation:
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
@@ -34,20 +35,20 @@ class Simulation:
 
         # Interaction between humans
         for i in range(len(self.humans)):
-            for j in range(i+1, len(self.humans)):
+            for j in range(i + 1, len(self.humans)):
                 interact(self.humans[i], self.humans[j])
 
         # Interaction between zombies
         for i in range(len(self.zombies)):
-            for j in range(i+1, len(self.zombies)):
+            for j in range(i + 1, len(self.zombies)):
                 interact(self.zombies[i], self.zombies[j])
 
     def reset_entitiies(self):
         entities.clear()
 
     def run(self):
-        # Initialize the DataFrame for metrics
-        metrics = pd.DataFrame(columns=['Epoch', 'Total_Days', 'Ending_Num_Humans', 'Ending_Num_Zombies', 'Peak_Zombies', 'Peak_Groups', 'Love', 'War', 'Rob', 'Esc', 'Kill', 'Infect'])
+        # Initialize the dictionary for metrics
+        metrics = {}
 
         for epoch in range(self.epochs):
             peak_zombies = 0
@@ -73,5 +74,13 @@ class Simulation:
                 enc_types[log.action] += 1
 
             # Log the metrics for this epoch
-            metrics = metrics.append({'Epoch': epoch, 'Total_Days': self.days, 'Ending_Num_Humans': ending_num_humans, 'Ending_Num_Zombies': ending_num_zombies, 'Peak_Zombies': peak_zombies, 'Peak_Groups': peak_groups, 'Love': enc_types['love'], 'War': enc_types['war'], 'Rob': enc_types['rob'], 'Esc': enc_types['esc'], 'Kill': enc_types['kill'], 'Infect': enc_types['infect']}, ignore_index=True)
+            metrics['Epoch'] = epoch
+            metrics['Total_Days'] = self.days
+            metrics['Ending_Num_Humans'] = ending_num_humans
+            metrics['Ending_Num_Zombies'] = ending_num_zombies
+            metrics['Peak_Zombies'] = peak_zombies
+            metrics['Peak_Groups'] = peak_groups
+            metrics.update(enc_types)
 
+        # Return the metrics dictionary
+        return metrics

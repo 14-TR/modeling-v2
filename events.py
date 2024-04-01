@@ -80,6 +80,7 @@ def war_encounter(human, other):
 
     # Update war_xp and resources
     winner.xp['war'] += .5
+    winner.enc['war'] += 1
 
     er = EncRecord(human, other, 'war')
     el.logs.append(er)
@@ -90,6 +91,7 @@ def war_encounter(human, other):
     rl.logs.append(rr)
 
     loser.att['res'] *= loser_survival_rate
+    loser.enc['war'] += 1
 
     rr = ResRecord(other, -loser.att['res']*loser_survival_rate, 'war')
     rl.logs.append(rr)
@@ -166,27 +168,24 @@ def kill_zombie_encounter(human, zombie):
 
 
 def infect_human_encounter(human, zombie):
-
-    human.is_zombie = True
-
+    human.is_z = True
     #add human to zombie group
     for group in zombie.grp.values():
         group.add_member(human)
         gr = GrpRecord(group, human.id, 'add', 'infect')
         gl.logs.append(gr)
-
     human.att['ttd'] = 10
-
     er = EncRecord(zombie, human, 'infect')
     el.logs.append(er)
-
     zombie.att['ttd'] += 2
     zombie.enc['inf'] += 1
-
     for group in human.grp.values():
         group.remove_member(human)
         gr = GrpRecord(group, human.id, 'remove', 'infect')
         gl.logs.append(gr)
+    # log
+
+
 
 
 def human_to_human(human, other):

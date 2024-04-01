@@ -52,6 +52,7 @@ class Human(Entity):
     def __init__(self, res=start_res):
         super().__init__()
         self.att['res'] = res
+        self.is_h = True
 
     def move(self):
         if not self.is_z:

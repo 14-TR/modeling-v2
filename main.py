@@ -11,8 +11,11 @@ def main():
     # Initialize the simulation
     sim = Simulation()
 
-    # Run the simulation and get the metrics DataFrame
-    metrics = sim.run()
+    # Run the simulation and get the metrics dictionary
+    metrics_dict = sim.run()
+
+    # Convert the metrics dictionary to a DataFrame
+    metrics_df = pd.DataFrame(metrics_dict, index=[0])
 
     # Generate a unique folder name using the current timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -39,8 +42,10 @@ def main():
     grp_df.to_csv(os.path.join(new_log_path, "grp_log.csv"), index=False)
 
     # Write the metrics DataFrame to a CSV file
-    metrics.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
+    metrics_df.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
+
+    return metrics_df, move_df, enc_df, res_df, grp_df
 
 
 if __name__ == '__main__':
-    main()
+    metrics_df, move_df, enc_df, res_df, grp_df = main()
