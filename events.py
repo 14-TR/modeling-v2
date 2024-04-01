@@ -1,6 +1,8 @@
 import random
+
 from config import inf_rate
-from ents import Group
+from ents import Group, entities
+from log import EncRecord, ResRecord, GrpRecord, el, rl, gl
 
 
 def interact(ent1, ent2):
@@ -21,7 +23,7 @@ def interact(ent1, ent2):
 
 
 def update_status(entity):
-    if entity.is_zombie:
+    if entity.is_z:
         entity.att['ttd'] -= 1.5
         if entity.att['ttd'] <= 0:
             entity.is_active = False
@@ -29,7 +31,7 @@ def update_status(entity):
         if entity.att['res'] > 0:
             entity.att['res'] -= .5
         else:
-            entity.is_zombie = True
+            entity.is_z = True
             entity.att['res'] = 0
 
 
@@ -37,18 +39,20 @@ def love_encounter(human, other):
     amount = (human.att['res'] + other.att['res']) / 2
     human.att['res'] = other.att['res'] = amount
     human.enc['luv'] += 1
-    human.xp['luv_xp'] += .5
+    human.xp['luv'] += .5
     other.enc['luv'] += 1
-    other.xp['luv_xp'] += .5
+    other.xp['luv'] += .5
 
     # creates a group between the two entities if they are not already group mates
-    for group in human.grp:
-        if other.id in group.members:
-            break
+    for group_id in human.grp.keys():
+        if group_id in entities:  # Check if the Group object exists
+            group = entities[group_id]  # Get the Group object
+            if other.id in group.members:
+                break
     else:
         group = Group()
-        group.members.add_member(human.id)
-        group.members.add_member(other.id)
+        group.members.append(human.id)
+        group.members.append(other.id)
         human.grp[group.id] = group
         other.grp[group.id] = group
 
@@ -57,6 +61,11 @@ def love_encounter(human, other):
     other.net['friend'][human.id] = human
 
     #  encounter and resource change logging placeholder
+    er = EncRecord(human, other, 'love')
+    el.logs.append(er)
+
+    rr = ResRecord(human, amount, 'love')
+    rl.logs.append(rr)
 
 
 def war_encounter(human, other):
@@ -67,8 +76,19 @@ def war_encounter(human, other):
 
     # Update war_xp and resources
     winner.xp['war'] += .5
+
+    er = EncRecord(human, other, 'war')
+    el.logs.append(er)
+
     winner.att['res'] += loser.att['res'] * (1 - loser_survival_rate)
+
+    rr = ResRecord(human, loser.att['res'] * (1 - loser_survival_rate), 'war')
+    rl.logs.append(rr)
+
     loser.att['res'] *= loser_survival_rate
+
+    rr = ResRecord(other, -loser.att['res']*loser_survival_rate, 'war')
+    rl.logs.append(rr)
 
     # Check if loser is dead and handle accordingly
     if loser.att['res'] <= 0 or random.random() < loser_death_rate:
@@ -78,44 +98,90 @@ def war_encounter(human, other):
             group.remove_member(loser)
     else:
         # Add each other to their network as foes
-        winner.net['foes'][loser.id] = loser
-        loser.net['foes'][winner.id] = winner
+        winner.net['foe'][loser.id] = loser
+        rr = ResRecord(human, loser.att[ 'res' ], 'war')
+        rl.logs.append(str(rr))
+
+        loser.net['foe'][winner.id] = winner
+        rr = ResRecord(other, loser.att[ 'res' ], 'war')
+        rl.logs.append(str(rr))
 
 
 def theft_encounter(human, other):
     # Determine the winner and loser based on theft_xp
-    winner, loser = (human, other) if human.xp['theft'] > other.xp['theft'] else (other, human)
+    winner, loser = (human, other) if human.xp['rob'] > other.xp['rob'] else (other, human)
 
     # Update theft_xp and resources
     winner.xp['rob'] += .5
-    winner.att['res'] += loser.att['res']
-    loser.att['res'] = 0
+    er = EncRecord(winner, loser, 'rob')
+    el.logs.append(str(er))
+
+    winner.att['res'] += loser.att['res'] * (loser.xp['rob']/winner.xp['rob'])
+    rr = ResRecord(winner, loser.att['res'] * (loser.xp['rob']/winner.xp['rob']), 'rob')
+    rl.logs.append(str(rr))
+
+    loser.att['res'] -= loser.att['res'] * (loser.xp['rob']/winner.xp['rob'])
+    rr = ResRecord(loser, -loser.att['res'] * (loser.xp['rob']/winner.xp['rob']), 'rob')
+    rl.logs.append(str(rr))
 
     # Check if loser is dead and handle accordingly
     if loser.att['res'] <= 0:
         loser.is_zombie = True
         for group in loser.grp.values():
             group.remove_member(loser)
+            gr = GrpRecord(group, loser.id, 'remove', 'rob')
+            gl.logs.append(str(gr))
     else:
         # Add each other to their network as foes
-        winner.net['foes'][loser.id] = loser
-        loser.net['foes'][winner.id] = winner
+        winner.net['foe'][loser.id] = loser
+        loser.net['foe'][winner.id] = winner
 
     # encounter and resource change logging placeholder
 
 
 def kill_zombie_encounter(human, zombie):
+
     human.xp['war'] += .5
+
+    er = EncRecord(human, zombie, 'kill')
+    el.logs.append(str(er))
+
     human.att['res'] += 2
+
+    rr = ResRecord(human, 2, 'kill')
+    rl.logs.append(str(rr))
+
     zombie.is_active = False
+
+    for group in zombie.grp.values():
+        group.remove_member(zombie)
+        gr = GrpRecord(group, zombie.id, 'remove', 'kill')
+        gl.logs.append(str(gr))
+
     # log
 
 
 def infect_human_encounter(human, zombie):
+
     human.is_zombie = True
+
+    #add human to zombie group
+    for group in zombie.grp.values():
+        group.add_member(human)
+        gr = GrpRecord(group, human.id, 'add', 'infect')
+        gl.logs.append(str(gr))
+
     human.att['ttd'] = 10
+
+    er = EncRecord(zombie, human, 'infect')
+    el.logs.append(str(er))
+
     zombie.att['ttd'] += 2
-    # log
+
+    for group in human.grp.values():
+        group.remove_member(human)
+        gr = GrpRecord(group, human.id, 'remove', 'infect')
+        gl.logs.append(str(gr))
 
 
 def human_to_human(human, other):
@@ -133,6 +199,9 @@ def human_to_human(human, other):
         theft_encounter(human, other)
     elif outcome[0] == 'esc':
         human.xp['esc'] += .5
+        other.xp['esc'] += .25
+        er = EncRecord(human, other, 'esc')
+        el.logs.append(str(er))
 
 
 def human_to_zombie(human, zombie):
@@ -150,6 +219,8 @@ def human_to_zombie(human, zombie):
         infect_human_encounter(human, zombie)
     elif outcome[0] == 'esc':
         human.xp['esc'] += .5
+        er = EncRecord(human, zombie, 'esc')
+        el.logs.append(str(er))
 
 
 def zombie_to_human(zombie, other):
@@ -159,3 +230,5 @@ def zombie_to_human(zombie, other):
         infect_human_encounter(other, zombie)
     else:
         other.xp['esc'] += .5
+        er = EncRecord(other, zombie, 'esc')
+        el.logs.append(str(er))

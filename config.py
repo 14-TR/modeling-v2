@@ -12,6 +12,7 @@ max_res_gain = 5
 
 size = 50
 grid_size = (size, size)
+w,h=size,size
 vi = 0.025
 vj = 0.025
 z = 4
