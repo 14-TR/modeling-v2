@@ -53,6 +53,8 @@ class Human(Entity):
         super().__init__()
         self.att['res'] = res
         self.is_h = True
+        self.is_z = False
+        self.is_active = True
 
     def move(self):
         if not self.is_z:
@@ -111,10 +113,12 @@ class Human(Entity):
             self.loc['y'] += dy
 
     def move_res(self):
-        # Assuming the Grid class has a method get_nearest_resource_point() that returns the closest resource point's (x, y) location
+        # Assuming the Grid class has a method get_nearest_resource_point() that returns the closest resource point's
+        # (x, y) location
         nearest_res_x, nearest_res_y = self.grid.get_nearest_res_pnt(self.loc['x'], self.loc['y'])
 
-        # Calculate direction to move towards the resource point. This is a simple version that moves one step towards the resource point.
+        # Calculate direction to move towards the resource point. This is a simple version that moves one step
+        # towards the resource point.
         dx = 1 if nearest_res_x > self.loc['x'] else -1 if nearest_res_x < self.loc['x'] else 0
         dy = 1 if nearest_res_y > self.loc['y'] else -1 if nearest_res_y < self.loc['y'] else 0
 
@@ -183,11 +187,19 @@ class Human(Entity):
             for member in adjacent_group_members:
                 member.att['res'] = distributed_resource
 
+    def turn_into_zombie(self):
+        self.is_z = True
+        self.is_h = False
+        new_zombie = Zombie(ttd=start_ttd)
+        new_zombie.loc = self.loc.copy()
+
+
 
 class Zombie(Entity):
     def __init__(self, ttd=start_ttd):
         super().__init__()
         self.att['ttd'] = ttd
+        self.is_h = False
         self.is_z = True
         self.is_active = True
 
@@ -293,8 +305,9 @@ class Zombie(Entity):
 
 class Group:
     groups = []
-    def __init__(self):
-        self.id = id_generator.gen_id()
+    def __init__(self, type):
+        self.type = type
+        self.id = (f"HG_{id_generator.gen_id()}" if type == "human" else f"ZG_{id_generator.gen_id()}")
         entities[self.id] = self
         self.members = []
         Group.groups.append(self)

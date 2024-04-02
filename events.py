@@ -5,7 +5,8 @@ from ents import Group, entities
 from log import EncRecord, ResRecord, GrpRecord, el, rl, gl
 
 
-def interact(ent1, ent2):
+
+def interact(simulation,ent1, ent2):
     if not ent1.is_adjacent(ent2):
         return
 
@@ -23,7 +24,7 @@ def interact(ent1, ent2):
             human_to_zombie(human, zombie)
     else:
         if ent1.loc['x'] - 2 <= ent2.loc['x'] <= ent1.loc['x'] + 2 and ent1.loc['y'] - 2 <= ent2.loc['y'] <= ent1.loc['y'] + 2:
-            human_to_human(ent1, ent2)
+            human_to_human(simulation, ent1, ent2)
 
 
 def update_status(entity):
@@ -54,7 +55,7 @@ def love_encounter(human, other):
             if other.id in group.members:
                 break
     else:
-        group = Group()
+        group = Group("human")
         group.members.append(human.id)
         group.members.append(other.id)
         human.grp[group.id] = group
@@ -72,7 +73,7 @@ def love_encounter(human, other):
     rl.logs.append(rr)
 
 
-def war_encounter(human, other):
+def war_encounter(simulation, human, other):
     from config import loser_survival_rate, loser_death_rate
 
     # Determine the winner and loser based on war_xp
@@ -99,9 +100,13 @@ def war_encounter(human, other):
     # Check if loser is dead and handle accordingly
     if loser.att['res'] <= 0 or random.random() < loser_death_rate:
         loser.att['res'] = 0
-        loser.is_zombie = True
+        loser.turn_into_zombie()
+        simulation.zombies.append(loser)
+        simulation.humans.remove(loser)
         for group in loser.grp.values():
-            group.remove_member(loser)
+            group.remove_member(human)
+            gr = GrpRecord(group, loser.id, 'remove', 'war')
+            gl.logs.append(gr)
     else:
         # Add each other to their network as foes
         winner.net['foe'][loser.id] = loser
@@ -168,27 +173,29 @@ def kill_zombie_encounter(human, zombie):
 
 
 def infect_human_encounter(human, zombie):
-    human.is_z = True
-    #add human to zombie group
-    for group in zombie.grp.values():
-        group.add_member(human)
-        gr = GrpRecord(group, human.id, 'add', 'infect')
-        gl.logs.append(gr)
+
+    # Create a new zombie group and add the infected human to it
+    zombie_group = Group("zombie")
+    zombie_group.add_member(human)
+    gr = GrpRecord(zombie_group, human.id, 'add', 'infect')
+    gl.logs.append(gr)
+
     human.att['ttd'] = 10
     er = EncRecord(zombie, human, 'infect')
     el.logs.append(er)
     zombie.att['ttd'] += 2
     zombie.enc['inf'] += 1
+
+    # Remove the human from all his current groups
     for group in human.grp.values():
         group.remove_member(human)
         gr = GrpRecord(group, human.id, 'remove', 'infect')
         gl.logs.append(gr)
-    # log
+
+    human.turn_into_zombie()
 
 
-
-
-def human_to_human(human, other):
+def human_to_human(simulation, human, other):
     outcome = random.choices(population=['love', 'war', 'rob', 'run'],
                              weights=[abs(human.xp['luv'] + other.xp['luv'] + 0.1),
                                       abs(human.xp['war'] + other.xp['war'] + 0.1),
@@ -198,7 +205,7 @@ def human_to_human(human, other):
     if outcome[0] == 'love':
         love_encounter(human, other)
     elif outcome[0] == 'war':
-        war_encounter(human, other)
+        war_encounter(simulation, human, other)
     elif outcome[0] == 'rob':
         theft_encounter(human, other)
     elif outcome[0] == 'esc':

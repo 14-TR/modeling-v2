@@ -29,19 +29,24 @@ class Simulation:
             zombie.update_status()
 
         # Interaction between humans and zombies
-        for human in self.humans:
+        for human in list(self.humans):  # Create a copy of the list
             for zombie in self.zombies:
-                interact(human, zombie)
+                interact(self, human, zombie)
 
         # Interaction between humans
-        for i in range(len(self.humans)):
-            for j in range(i + 1, len(self.humans)):
-                interact(self.humans[i], self.humans[j])
+        if self.humans:  # Check if the list is not empty
+            humans_copy = list(self.humans)  # Create a copy of the list
+            for i in range(len(humans_copy)):
+                print(f"Before interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
+                for j in range(i + 1, len(humans_copy)):
+                    interact(self, humans_copy[i], humans_copy[j])
+                print(f"After interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
 
         # Interaction between zombies
-        for i in range(len(self.zombies)):
-            for j in range(i + 1, len(self.zombies)):
-                interact(self.zombies[i], self.zombies[j])
+        if self.zombies:  # Check if the list is not empty
+            for i in range(len(self.zombies)):
+                for j in range(i + 1, len(self.zombies)):
+                    interact(self, self.zombies[i], self.zombies[j])
 
     def reset_entitiies(self):
         entities.clear()
