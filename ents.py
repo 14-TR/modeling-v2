@@ -2,12 +2,12 @@ import random
 
 from config import start_res, start_ttd, grid_size, max_res_gain
 from env import Grid
-from globals import global_entities
+# from globals import global_entities
 from log import ml, gl, rl, MoveRecord, ResRecord
 from util import id_generator
 
 entities = {}  # Dictionary to store all entities
-
+starve_cnt = []
 class Entity:
     grid = Grid(grid_size=grid_size)
 
@@ -39,7 +39,7 @@ class Entity:
         from events import update_status
         update_status(self)
         if not self.is_active:
-            global_entities['removed'].append(self)
+            # global_entities['removed'].append(self)
             self.id = self.id.split('_')[0] + '_X'
 
     def calculate_elevation_effect(self, dx, dy):
@@ -55,11 +55,14 @@ class Human(Entity):
 
     def __init__(self, res=start_res):
         super().__init__(entity_type='H')
+        #replace the self id for the entity related to this human in the entities dict
         self.att['res'] = res
         self.is_h = True
         self.is_z = False
         self.is_active = True
-        global_entities['humans'].append(self)
+        #append the human to the entities dict
+        entities[self.id] = self
+        # global_entities['humans'].append(self)
 
     def __str__(self):
         return f"Human {self.id}"
@@ -84,8 +87,12 @@ class Human(Entity):
             rl.log(entity=self, res_change=-.5, reason='move')
 
             # Check if the human has run out of resources
+
             if self.att['res'] <= 0:
+                # print(f"Human {self.id} has run out of resources.")
+                starve_cnt.append(self.id)
                 self.turn_into_zombie()
+            print(f"Starve count: {len(starve_cnt)}")
 
     def prob_move_res(self):
         return random.random() < (1 - self.att['res'] / 10)
@@ -200,12 +207,16 @@ class Human(Entity):
                 member.att['res'] = distributed_resource
 
     def turn_into_zombie(self):
-        self.is_z = True
-        self.is_h = False
+
         new_zombie = Zombie(ttd=start_ttd)
         new_zombie.loc = self.loc.copy()
         new_zombie.id = self.id.replace('_H', '_Z')  # Change the ID suffix from 'H' to 'Z'
         entities[new_zombie.id] = new_zombie
+
+        if self.id in entities:
+            entities.pop(self.id)
+        else:
+            print(f"Entity with ID {self.id} not found in entities dictionary.")
 
 
         #remove human from human groups
@@ -215,7 +226,8 @@ class Human(Entity):
                 group.remove_member(self)
 
         gl.log(self, new_zombie, 'turn', 'zombie')
-
+        self.is_z = True
+        self.is_h = False
         #remove human from humans list
         # simulation.humans.remove(self)
         # simulation.zombies.append(new_zombie)
@@ -228,7 +240,7 @@ class Zombie(Entity):
         self.is_h = False
         self.is_z = True
         self.is_active = True
-        global_entities['zombies'].append(self)
+        # global_entities['zombies'].append(self)
 
     def __str__(self):
         return f"Zombie {self.id}"
