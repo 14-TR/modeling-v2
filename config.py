@@ -24,11 +24,11 @@ z = 4
 
 num_humans = 100
 
-num_zombies = 1
+num_zombies = 5
 
 epochs = 1
 
-days = 500
+days = 365*3
 
 loser_survival_rate = 0.25  # The loser keeps % of their resources
 

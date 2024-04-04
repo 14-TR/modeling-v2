@@ -5,14 +5,13 @@ from ents import Group, entities
 from log import EncRecord, ResRecord, GrpRecord, el, rl, gl
 
 
-
-def interact(simulation,ent1, ent2):
+def interact(simulation, ent1, ent2):
     if not ent1.is_adjacent(ent2):
         return
 
     # Check if both entities are zombies
     if ent1.is_z and ent2.is_z:
-        return  # Skip interaction if both entities are zombies
+        return  # Skip
 
     if ent1.is_z or ent2.is_z:
         if not ent1.is_z:
@@ -20,10 +19,16 @@ def interact(simulation,ent1, ent2):
         else:
             human, zombie = ent2, ent1
 
-        if human.loc['x'] - 2 <= zombie.loc['x'] <= human.loc['x'] + 2 and human.loc['y'] - 2 <= zombie.loc['y'] <= human.loc['y'] + 2:
+            # Check if the zombie is active before proceeding with the interaction
+        if not zombie.is_active:
+            return
+
+        if human.loc['x'] - 2 <= zombie.loc['x'] <= human.loc['x'] + 2 and human.loc['y'] - 2 <= zombie.loc['y'] <= \
+                human.loc['y'] + 2:
             human_to_zombie(human, zombie)
     else:
-        if ent1.loc['x'] - 2 <= ent2.loc['x'] <= ent1.loc['x'] + 2 and ent1.loc['y'] - 2 <= ent2.loc['y'] <= ent1.loc['y'] + 2:
+        if ent1.loc['x'] - 2 <= ent2.loc['x'] <= ent1.loc['x'] + 2 and ent1.loc['y'] - 2 <= ent2.loc['y'] <= ent1.loc[
+            'y'] + 2:
             human_to_human(simulation, ent1, ent2)
 
 
@@ -38,6 +43,7 @@ def update_status(entity):
         else:
             entity.is_z = True
             entity.att['res'] = 0
+            entity.turn_into_zombie()
 
 
 def love_encounter(human, other):
@@ -94,7 +100,7 @@ def war_encounter(simulation, human, other):
     loser.att['res'] *= loser_survival_rate
     loser.enc['war'] += 1
 
-    rr = ResRecord(other, -loser.att['res']*loser_survival_rate, 'war')
+    rr = ResRecord(other, -loser.att['res'] * loser_survival_rate, 'war')
     rl.logs.append(rr)
 
     # Check if loser is dead and handle accordingly
@@ -110,11 +116,11 @@ def war_encounter(simulation, human, other):
     else:
         # Add each other to their network as foes
         winner.net['foe'][loser.id] = loser
-        rr = ResRecord(human, loser.att[ 'res' ], 'war')
+        rr = ResRecord(human, loser.att['res'], 'war')
         rl.logs.append(rr)
 
         loser.net['foe'][winner.id] = winner
-        rr = ResRecord(other, loser.att[ 'res' ], 'war')
+        rr = ResRecord(other, loser.att['res'], 'war')
         rl.logs.append(rr)
 
 
@@ -127,12 +133,12 @@ def theft_encounter(human, other):
     er = EncRecord(winner, loser, 'rob')
     el.logs.append(er)
 
-    winner.att['res'] += loser.att['res'] * (loser.xp['rob']/winner.xp['rob'])
-    rr = ResRecord(winner, loser.att['res'] * (loser.xp['rob']/winner.xp['rob']), 'rob')
+    winner.att['res'] += loser.att['res'] * (loser.xp['rob'] / winner.xp['rob'])
+    rr = ResRecord(winner, loser.att['res'] * (loser.xp['rob'] / winner.xp['rob']), 'rob')
     rl.logs.append(rr)
 
-    loser.att['res'] -= loser.att['res'] * (loser.xp['rob']/winner.xp['rob'])
-    rr = ResRecord(loser, -loser.att['res'] * (loser.xp['rob']/winner.xp['rob']), 'rob')
+    loser.att['res'] -= loser.att['res'] * (loser.xp['rob'] / winner.xp['rob'])
+    rr = ResRecord(loser, -loser.att['res'] * (loser.xp['rob'] / winner.xp['rob']), 'rob')
     rl.logs.append(rr)
 
     # Check if loser is dead and handle accordingly
@@ -151,7 +157,6 @@ def theft_encounter(human, other):
 
 
 def kill_zombie_encounter(human, zombie):
-
     human.xp['war'] += .5
 
     er = EncRecord(human, zombie, 'kill')
@@ -173,7 +178,6 @@ def kill_zombie_encounter(human, zombie):
 
 
 def infect_human_encounter(human, zombie):
-
     # Create a new zombie group and add the infected human to it
     zombie_group = Group("zombie")
     zombie_group.add_member(human)

@@ -131,15 +131,16 @@ class Grid:
     def add_ent(self, ent):
         while (ent.loc['x'], ent.loc['y']) in self.occupied_positions:  # Check if position is occupied
             # Generate new positions until an unoccupied one is found
-            ent.loc['x'] = random.randint(0, self.width - 1)
-            ent.loc['y'] = random.randint(0, self.height - 1)
+            ent.loc['x'] = random.randint(1, self.width - 1)
+            ent.loc['y'] = random.randint(1, self.height - 1)
         self.occupied_positions.add((ent.loc['x'], ent.loc['y']))  # Add the new position to the set
         self.ents.append(ent)
 
     def remove_inactive_ents(self):
         for ent in self.ents:
             if not ent.is_active:
-                self.occupied_positions.remove((ent.x, ent.y))
+                if (ent.loc['x'], ent.loc['y']) in self.occupied_positions:
+                    self.occupied_positions.remove((ent.loc['x'], ent.loc['y']))
                 self.ents.remove(ent)
                 self.rmv_ents += 1
 

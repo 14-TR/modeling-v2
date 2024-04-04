@@ -12,12 +12,12 @@ class IDGenerator:
         self.characters = "123456789ABCDEFG"
         self.used_ids = set()
 
-    def gen_id(self):
+    def gen_id(self, entity_type):
         while True:
             new_id = ''.join(random.choices(self.characters, k=6))
             if new_id not in self.used_ids:
                 self.used_ids.add(new_id)
-                return new_id
+                return new_id + "_" +entity_type
 
 
 # Create a global instance of IDGenerator

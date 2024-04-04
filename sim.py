@@ -1,6 +1,6 @@
 import pandas as pd
 
-from env import Grid, DayTracker
+from env import Grid, DayTracker, Epoch
 from ents import Human, Zombie, Group, entities
 from config import grid_size, num_humans, num_zombies, epochs, days
 from events import interact
@@ -8,6 +8,7 @@ from log import el
 
 
 class Simulation:
+
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
         self.humans = [Human() for _ in range(humans)]
@@ -21,32 +22,40 @@ class Simulation:
             self.grid.add_ent(zombie)
 
     def simulate_day(self):
-        for human in self.humans:
+        for human in list(self.humans):
             human.move()
             human.update_status()
-        for zombie in self.zombies:
+        for zombie in list(self.zombies):
             zombie.move()
             zombie.update_status()
+
+        self.grid.remove_inactive_ents()
+
+        DayTracker.increment_day()
 
         # Interaction between humans and zombies
         for human in list(self.humans):  # Create a copy of the list
             for zombie in self.zombies:
                 interact(self, human, zombie)
 
+        if not self.humans:
+            print("Simulation stopped: All entities are zombies.")
+            return
+
         # Interaction between humans
         if self.humans:  # Check if the list is not empty
             humans_copy = list(self.humans)  # Create a copy of the list
             for i in range(len(humans_copy)):
-                print(f"Before interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
+                # print(f"Before interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
                 for j in range(i + 1, len(humans_copy)):
                     interact(self, humans_copy[i], humans_copy[j])
-                print(f"After interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
+                # print(f"After interaction: Length of humans_copy = {len(humans_copy)}, i = {i}")
 
         # Interaction between zombies
-        if self.zombies:  # Check if the list is not empty
-            for i in range(len(self.zombies)):
-                for j in range(i + 1, len(self.zombies)):
-                    interact(self, self.zombies[i], self.zombies[j])
+        # if self.zombies:  # Check if the list is not empty
+        #     for i in range(len(self.zombies)):
+        #         for j in range(i + 1, len(self.zombies)):
+        #             interact(self, self.zombies[i], self.zombies[j])
 
     def reset_entitiies(self):
         entities.clear()
@@ -67,7 +76,7 @@ class Simulation:
                 peak_zombies = max(peak_zombies, len(self.zombies))
                 peak_groups = max(peak_groups, len(Group.groups))
 
-            DayTracker.increment_day()
+            # Epoch.increment_epoch()
 
             # Get the final counts of humans and zombies
             ending_num_humans = len(self.humans)

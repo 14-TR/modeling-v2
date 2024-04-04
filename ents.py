@@ -2,17 +2,17 @@ import random
 
 from config import start_res, start_ttd, grid_size, max_res_gain
 from env import Grid
+from globals import global_entities
 from log import ml, gl, rl, MoveRecord, ResRecord
 from util import id_generator
 
-entities = {}  # A dictionary that maps IDs to Entity objects
-
+entities = {}  # Dictionary to store all entities
 
 class Entity:
     grid = Grid(grid_size=grid_size)
 
-    def __init__(self, grid=grid):
-        self.id = id_generator.gen_id()  # Generate a unique ID for the entity
+    def __init__(self, grid=grid, entity_type=''):
+        self.id = id_generator.gen_id(entity_type)  # Generate a unique ID for the entity
         entities[self.id] = self  # Add the entity to the global entities dictionary
         self.loc = {'x': 0, 'y': 0, 'z': 0}  # Default location
         self.att = {'res': 0, 'ttd': 0}  # Default attributes
@@ -24,6 +24,7 @@ class Entity:
         self.grp = {}  # Default groups, group ids held as keys
         self.net = {'friend': {}, 'foe': {}}  # Default network connections, entity ids held as keys
         self.grid = grid
+        self.day = 0
 
     def is_adjacent(self, other):
         dx = abs(self.loc['x'] - other.loc['x'])
@@ -32,11 +33,14 @@ class Entity:
 
     def interact(self, other):
         from events import interact  # Import the interact function from events.py
-        interact(self, other)  # Call the interact function with self and other as arguments
+        interact(ent1=self, ent2=other)  # Call the interact function with self and other as arguments
 
     def update_status(self):
         from events import update_status
         update_status(self)
+        if not self.is_active:
+            global_entities['removed'].append(self)
+            self.id = self.id.split('_')[0] + '_X'
 
     def calculate_elevation_effect(self, dx, dy):
         # Calculate the elevation difference
@@ -50,11 +54,15 @@ class Entity:
 class Human(Entity):
 
     def __init__(self, res=start_res):
-        super().__init__()
+        super().__init__(entity_type='H')
         self.att['res'] = res
         self.is_h = True
         self.is_z = False
         self.is_active = True
+        global_entities['humans'].append(self)
+
+    def __str__(self):
+        return f"Human {self.id}"
 
     def move(self):
         if not self.is_z:
@@ -72,8 +80,12 @@ class Human(Entity):
             self.distribute_resources()
 
             self.att['res'] -= .5
-
+            self.day += 1
             rl.log(entity=self, res_change=-.5, reason='move')
+
+            # Check if the human has run out of resources
+            if self.att['res'] <= 0:
+                self.turn_into_zombie()
 
     def prob_move_res(self):
         return random.random() < (1 - self.att['res'] / 10)
@@ -192,16 +204,34 @@ class Human(Entity):
         self.is_h = False
         new_zombie = Zombie(ttd=start_ttd)
         new_zombie.loc = self.loc.copy()
+        new_zombie.id = self.id.replace('_H', '_Z')  # Change the ID suffix from 'H' to 'Z'
+        entities[new_zombie.id] = new_zombie
 
+
+        #remove human from human groups
+        for group_id in self.grp.keys():
+            if group_id in entities:
+                group = entities[group_id]
+                group.remove_member(self)
+
+        gl.log(self, new_zombie, 'turn', 'zombie')
+
+        #remove human from humans list
+        # simulation.humans.remove(self)
+        # simulation.zombies.append(new_zombie)
 
 
 class Zombie(Entity):
     def __init__(self, ttd=start_ttd):
-        super().__init__()
+        super().__init__(entity_type='Z')
         self.att['ttd'] = ttd
         self.is_h = False
         self.is_z = True
         self.is_active = True
+        global_entities['zombies'].append(self)
+
+    def __str__(self):
+        return f"Zombie {self.id}"
 
     def move(self):
         if self.att['ttd'] <= 0:
@@ -219,7 +249,8 @@ class Zombie(Entity):
 
         ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
-        self.att['ttd'] -= 1.5
+        self.att['ttd'] -= .5
+        self.day += 1
 
     def prob_move_grp(self):
         collective_res = sum(member.res for member in self.grp.values()) / len(self.grp)
@@ -307,7 +338,7 @@ class Group:
     groups = []
     def __init__(self, type):
         self.type = type
-        self.id = (f"HG_{id_generator.gen_id()}" if type == "human" else f"ZG_{id_generator.gen_id()}")
+        self.id = (f"HG_{id_generator.gen_id('H')}" if type == "human" else f"ZG_{id_generator.gen_id('Z')}")
         entities[self.id] = self
         self.members = []
         Group.groups.append(self)
