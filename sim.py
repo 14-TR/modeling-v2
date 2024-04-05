@@ -7,6 +7,7 @@ from events import interact
 from log import el
 
 
+
 def reset_entities():
     entities.clear()
 
@@ -16,6 +17,7 @@ class Simulation:
 
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
+        self.surface = self.grid.surface
         self.humans = [Human() for _ in range(humans)]
         self.zombies = [Zombie() for _ in range(zombies)]
         self.epochs = e

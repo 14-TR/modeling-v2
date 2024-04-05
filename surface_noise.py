@@ -13,7 +13,12 @@ import numpy as np
 import perlin as p
 from config import vi, vj, z, w, h
 
-#generate a 2d grid of perlin noise that is 20 by 20
+vi = vi
+vj = vj
+z = z
+w = w
+h =h
+
 def generate_noise(w, h, vi, vj, z):
     noise = p.Perlin(14)
     grid = np.zeros((w, h))

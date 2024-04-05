@@ -50,6 +50,16 @@ class Entity:
         target_elevation = self.grid.get_elevation(self.loc['x'] + dx, self.loc['y'] + dy)
         elevation_diff = target_elevation - current_elevation
 
+        # # positive elevation_diff means moving uphill, negative means moving downhill
+        # if elevation_diff > 0:
+        #     # Reduce the step size when moving uphill
+        #     dx = round(dx / 2)
+        #     dy = round(dy / 2)
+        #     elevation_diff = 1
+        #
+        # # calculate increase loss of resources due to elevation change
+
+
         return elevation_diff
 
 
@@ -81,14 +91,23 @@ class Human(Entity):
             else:
                 self.move_rand()
 
+            new_elevation = self.grid.get_elevation(self.loc['x'], self.loc['y'])
+            self.loc['z'] = new_elevation
             ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
             self.replenish_resources()
             self.distribute_resources()
 
-            self.att['res'] -= .5
+            # self.att['res'] -= .5
             # self.day += 1
-            rl.log(entity=self, res_change=-.5, reason='move')
+            #if moving up hill, increase res loss
+            if self.loc['z'] > old_loc['z']:
+                effective_res_loss = .5 + abs(self.loc['z'] - old_loc['z']) * .5
+                self.att['res'] -= effective_res_loss
+                rl.log(entity=self, res_change=-effective_res_loss, reason='move')
+            else:
+                self.att['res'] -= .5
+                rl.log(entity=self, res_change=-.5, reason='move')
 
             # Check if the human has run out of resources
 
@@ -253,6 +272,7 @@ class Zombie(Entity):
             return  # Zombie has run out of time to decay
 
         old_loc = self.loc.copy()
+        #
 
         if self.grp and self.prob_move_grp():
             self.move_grp()
@@ -261,10 +281,13 @@ class Zombie(Entity):
         else:
             self.move_rand()
 
+        new_elevation = self.grid.get_elevation(self.loc['x'], self.loc['y'])
+        self.loc['z'] = new_elevation
         ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
         self.att['ttd'] -= .5
-        # rl.log(entity=self, res_change=-.5, reason='move')
+
+    # rl.log(entity=self, res_change=-.5, reason='move')
 
     def prob_move_grp(self):
         collective_res = sum(member.res for member in self.grp.values()) / len(self.grp)
