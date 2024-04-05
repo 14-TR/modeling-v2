@@ -18,10 +18,11 @@ def main():
     sim = Simulation()
 
     # Run the simulation and get the metrics dictionary
-    metrics_dict = sim.run()
+    metrics_list = sim.run()
+
 
     # Convert the metrics dictionary to a DataFrame
-    metrics_df = pd.DataFrame(metrics_dict, index=[0])
+    metrics_df = pd.DataFrame(metrics_list, index=[0])
 
     # Generate a unique folder name using the current timestamp
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -49,6 +50,7 @@ def main():
 
     # Write the metrics DataFrame to a CSV file
     metrics_df.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
+    print(metrics_list)
 
 
     # for entity_type, entities in global_entities.items():

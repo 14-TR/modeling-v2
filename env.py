@@ -138,12 +138,14 @@ class Grid:
         self.ents.append(ent)
 
     def remove_inactive_ents(self):
+        removed_ents = 0
         for ent in self.ents:
             if not ent.is_active:
                 if (ent.loc['x'], ent.loc['y']) in self.occupied_positions:
                     self.occupied_positions.remove((ent.loc['x'], ent.loc['y']))
                 self.ents.remove(ent)
-                self.rmv_ents += 1
+                removed_ents += 1
+        return removed_ents
 
     def simulate_day(self):
         for ent in self.ents:
@@ -153,7 +155,7 @@ class Grid:
         self.remove_inactive_ents()
 
         # Increment the day in the simulation
-        DayTracker.increment_day()
+        # DayTracker.increment_day()
 
     def get_elevation(self, x, y):
         return self.surface[x][y]

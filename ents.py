@@ -8,6 +8,8 @@ from util import id_generator
 
 entities = {}  # Dictionary to store all entities
 starve_cnt = []
+
+
 class Entity:
     grid = Grid(grid_size=grid_size)
 
@@ -55,15 +57,16 @@ class Entity:
 class Human(Entity):
 
     def __init__(self, res=start_res):
-        # super().__init__(entity_type='H')
+        super().__init__(entity_type='H')
         super().__init__()
-        #replace the self id for the entity related to this human in the entities dict
+        # replace the self id for the entity related to this human in the entities dict
         self.att['res'] = res
         self.is_h = True
         self.is_z = False
         self.is_active = True
-        #append the human to the entities dict
+        # append the human to the entities dict
         entities[self.id] = self
+        self.starved = False
         # global_entities['humans'].append(self)
 
     def __str__(self):
@@ -218,12 +221,11 @@ class Human(Entity):
         if on_turn_into_zombie_callback:
             on_turn_into_zombie_callback(self, new_zombie)
 
-        #remove human from human groups
+        # remove human from human groups
         for group_id in self.grp.keys():
             if group_id in entities:
                 group = entities[group_id]
                 group.remove_member(self)
-
 
         self.is_z = True
         self.is_h = False
@@ -235,7 +237,7 @@ class Human(Entity):
 
 class Zombie(Entity):
     def __init__(self, ttd=start_ttd):
-        # super().__init__(entity_type='Z')
+        super().__init__(entity_type='Z')
         super().__init__()
         self.att['ttd'] = ttd
         self.is_h = False
@@ -243,8 +245,8 @@ class Zombie(Entity):
         self.is_active = True
         # global_entities['zombies'].append(self)
 
-    def __str__(self):
-        return f"Zombie {self.id}"
+    # def __str__(self):
+    #     return f"Zombie {self.id}"
 
     def move(self):
         if self.att['ttd'] <= 0:
@@ -349,6 +351,7 @@ class Zombie(Entity):
 
 class Group:
     groups = []
+
     def __init__(self, type):
         self.type = type
         self.id = (f"HG_{id_generator.gen_id('H')}" if type == "human" else f"ZG_{id_generator.gen_id('Z')}")
@@ -364,8 +367,14 @@ class Group:
             if member_id in entities:
                 member = entities[member_id]
                 if member.is_z == entity.is_z and member.id == entity.id:
-                    gl.log(self, entity, 'remove', 'turned' if entity.is_z else 'died')
-                    self.members.remove(member)
+                    gl.log(self, entity, 'remove', 'decayed')
+                    if member in self.members:  # Check if the member is in the list
+                        self.members.remove(member)
+                    break
+                elif not member.is_z == entity.is_z and member.id == entity.id:
+                    gl.log(self, entity, 'remove', 'starved')
+                    if member in self.members:  # Check if the member is in the list
+                        self.members.remove(member)
                     break
 
     def interact(self, other):
@@ -383,7 +392,7 @@ class Group:
             for member_id in self.members:
                 member = self.get_member_by_id(member_id)
                 if member is not None:
-                    interact(member, other)  # Call the interact function with each entity and the individual entity
+                    interact(ent1=member, ent2=other)  # Call the interact function with each entity and the individual entity
 
     def get_member_by_id(self, member_id):
         return entities[member_id] if member_id in entities else None
