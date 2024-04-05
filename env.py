@@ -7,7 +7,7 @@ from surface_noise import generate_noise
 
 
 class DayTracker:
-    current_day = 1
+    current_day = 0
 
     @classmethod
     def increment_day(cls):
@@ -19,14 +19,14 @@ class DayTracker:
 
     @classmethod
     def reset(cls):
-        cls.current_day = 1
+        cls.current_day = 0
 
 
 # ------------------------------------------------------------------
 
 
 class Epoch:
-    epoch = 1
+    epoch = 0
 
     @classmethod
     def increment_sim(cls):
@@ -38,7 +38,7 @@ class Epoch:
 
     @classmethod
     def reset(cls):
-        cls.epoch = 1
+        cls.epoch = 0
 
 
 # ------------------------------------------------------------------
@@ -147,15 +147,15 @@ class Grid:
                 removed_ents += 1
         return removed_ents
 
-    def simulate_day(self):
-        for ent in self.ents:
-            ent.move(self)
-            ent.update_status()
-
-        self.remove_inactive_ents()
-
-        # Increment the day in the simulation
-        # DayTracker.increment_day()
+    # def simulate_day(self):
+    #     for ent in self.ents:
+    #         ent.move(self)
+    #         ent.update_status()
+    #
+    #     self.remove_inactive_ents()
+    #
+    #     # Increment the day in the simulation
+    #     # DayTracker.increment_day()
 
     def get_elevation(self, x, y):
         return self.surface[x][y]

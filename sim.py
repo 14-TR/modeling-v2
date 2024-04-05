@@ -12,6 +12,7 @@ def reset_entities():
 
 
 class Simulation:
+    current_epoch = 0
 
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
@@ -46,16 +47,12 @@ class Simulation:
         removed_ents = self.grid.remove_inactive_ents()
         self.total_removed += removed_ents
 
-        DayTracker.increment_day()
-
         # Interaction between humans and zombies
         for human in list(self.humans):  # Create a copy of the list
             for zombie in self.zombies:
                 interact(self, human, zombie)
 
-        print(DayTracker.get_current_day(),len(self.humans), len(self.zombies))
-
-
+        # print(DayTracker.get_current_day(),len(self.humans), len(self.zombies))
         # Interaction between humans
         if self.humans:  # Check if the list is not empty
             humans_copy = list(self.humans)  # Create a copy of the list
@@ -70,18 +67,42 @@ class Simulation:
         self.num_infected += 1
         self.total_num_zombies += 1
 
+    def reset_simulation(self):
+        # Reset the metrics
+        self.starting_num_humans = len(self.humans)
+        self.starting_num_zombies = len(self.zombies)
+        self.num_starved = 0
+        self.num_infected = 0
+        self.total_num_zombies = len(self.zombies)
+        self.total_removed = 0
+        self.enc_types = {'love': 0, 'war': 0, 'rob': 0, 'esc': 0, 'kill': 0, 'infect': 0}
+
+        # Reset the encounter logs
+        # el.logs.clear()
+
+        # Reset the DayTracker, Epoch and Group class variables
+        DayTracker.reset()
+        Group.reset_groups()
+
     def run(self):
         # Initialize the list for metrics
         metrics_list = []
+        encounter_logs = []
 
         for epoch in range(self.epochs):
+
+            self.reset_simulation()
+
+            Epoch.increment_sim()
+
             metrics = {}
 
             peak_zombies = 0
             peak_groups = 0
+
             for _ in range(self.days):
+                DayTracker.increment_day()
                 self.simulate_day()
-                #
 
                 peak_zombies = max(peak_zombies, len(self.zombies))
                 peak_groups = max(peak_groups, len(Group.groups))
@@ -96,8 +117,10 @@ class Simulation:
                 enc_types[log.action] += 1
 
             # Log the metrics for this epoch
-            metrics['Epoch'] = epoch
-            metrics['End_Day'] = DayTracker.get_current_day()
+            metrics['Epoch'] = Epoch.get_current_epoch()
+            if len(self.humans) == 0 or len(self.zombies) == 0:
+                dd = DayTracker.get_current_day()
+                metrics['Day'] = dd
             metrics['Ending_Num_Humans'] = ending_num_humans
             metrics['Ending_Num_Zombies'] = ending_num_zombies
             metrics['Peak_Zombies'] = peak_zombies
@@ -108,14 +131,14 @@ class Simulation:
             metrics['Num_Infected'] = self.num_infected
             metrics['Total_Num_Zombies'] = self.total_num_zombies
             metrics['Total_Removed'] = self.total_removed
-            metrics.update(enc_types)
 
+            metrics.update(enc_types)
             metrics_list.append(metrics)
 
-            if metrics['Ending_Num_Humans'] == 0:
-                print(len(self.humans), len(self.zombies))
-                reset_entities()
-                break
+            self.__init__()
+
+            encounter_logs.append(el.logs.copy())
+            el.logs.clear()
 
         # Return the list of metrics dictionaries
-        return metrics_list
+        return metrics_list, encounter_logs

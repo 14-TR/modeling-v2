@@ -7,7 +7,6 @@ from log import ml, gl, rl, MoveRecord, ResRecord
 from util import id_generator
 
 entities = {}  # Dictionary to store all entities
-starve_cnt = []
 
 
 class Entity:
@@ -27,7 +26,7 @@ class Entity:
         self.grp = {}  # Default groups, group ids held as keys
         self.net = {'friend': {}, 'foe': {}}  # Default network connections, entity ids held as keys
         self.grid = grid
-        self.day = 0
+        # self.day = 0
 
     def is_adjacent(self, other):
         dx = abs(self.loc['x'] - other.loc['x'])
@@ -58,7 +57,7 @@ class Human(Entity):
 
     def __init__(self, res=start_res):
         super().__init__(entity_type='H')
-        super().__init__()
+        # super().__init__()
         # replace the self id for the entity related to this human in the entities dict
         self.att['res'] = res
         self.is_h = True
@@ -88,15 +87,15 @@ class Human(Entity):
             self.distribute_resources()
 
             self.att['res'] -= .5
-            self.day += 1
+            # self.day += 1
             rl.log(entity=self, res_change=-.5, reason='move')
 
             # Check if the human has run out of resources
 
-            if self.att['res'] <= 0:
-                # print(f"Human {self.id} has run out of resources.")
-                starve_cnt.append(self.id)
-                self.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
+            # if self.att['res'] <= 0:
+            # print(f"Human {self.id} has run out of resources.")
+            # starve_cnt.append(self.id)
+            # self.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
             # print(f"Starve count: {len(starve_cnt)}")
 
     def prob_move_res(self):
@@ -238,7 +237,7 @@ class Human(Entity):
 class Zombie(Entity):
     def __init__(self, ttd=start_ttd):
         super().__init__(entity_type='Z')
-        super().__init__()
+        # super().__init__()
         self.att['ttd'] = ttd
         self.is_h = False
         self.is_z = True
@@ -265,7 +264,7 @@ class Zombie(Entity):
         ml.log(self, old_loc['x'], old_loc['y'], old_loc['z'], self.loc['x'], self.loc['y'], self.loc['z'])
 
         self.att['ttd'] -= .5
-        self.day += 1
+        # rl.log(entity=self, res_change=-.5, reason='move')
 
     def prob_move_grp(self):
         collective_res = sum(member.res for member in self.grp.values()) / len(self.grp)
@@ -392,7 +391,14 @@ class Group:
             for member_id in self.members:
                 member = self.get_member_by_id(member_id)
                 if member is not None:
-                    interact(ent1=member, ent2=other)  # Call the interact function with each entity and the individual entity
+                    interact(ent1=member,
+                             ent2=other)  # Call the interact function with each entity and the individual entity
 
     def get_member_by_id(self, member_id):
         return entities[member_id] if member_id in entities else None
+
+    @classmethod
+    def reset_groups(cls):
+        cls.groups.clear()
+        for group in cls.groups:
+            del group  # Delete the group object
