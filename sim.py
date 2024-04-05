@@ -23,11 +23,11 @@ class Simulation:
 
     def simulate_day(self):
         for human in list(self.humans):
-            human.move()
-            human.update_status()
+            human.move(self)
+            human.update_status(self)
         for zombie in list(self.zombies):
             zombie.move()
-            zombie.update_status()
+            zombie.update_status(self)
 
         self.grid.remove_inactive_ents()
 
@@ -56,6 +56,12 @@ class Simulation:
         #     for i in range(len(self.zombies)):
         #         for j in range(i + 1, len(self.zombies)):
         #             interact(self, self.zombies[i], self.zombies[j])
+
+    def handle_turn_into_zombie(self, human, new_zombie):
+        # Handle the human to zombie transition within the simulation
+        self.humans.remove(human)
+        self.zombies.append(new_zombie)
+        # Any other updates related to this transition should be handled here
 
     def reset_entitiies(self):
         entities.clear()
@@ -98,3 +104,4 @@ class Simulation:
 
         # Return the metrics dictionary
         return metrics
+

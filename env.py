@@ -1,5 +1,6 @@
 # ==================================================================
 import random
+# from ents import entities
 
 from config import vi, vj, z, w, h
 from surface_noise import generate_noise
@@ -168,3 +169,4 @@ class Grid:
     #     humans = sum(1 for being in self.beings if not being.is_zombie and being.is_active)
     #     zombies = sum(1 for being in self.beings if being.is_zombie and being.is_active)
     #     return humans, zombies
+

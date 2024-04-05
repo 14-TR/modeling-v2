@@ -25,14 +25,14 @@ def interact(simulation, ent1, ent2):
 
         if human.loc['x'] - 2 <= zombie.loc['x'] <= human.loc['x'] + 2 and human.loc['y'] - 2 <= zombie.loc['y'] <= \
                 human.loc['y'] + 2:
-            human_to_zombie(human, zombie)
+            human_to_zombie(human, zombie, simulation)
     else:
         if ent1.loc['x'] - 2 <= ent2.loc['x'] <= ent1.loc['x'] + 2 and ent1.loc['y'] - 2 <= ent2.loc['y'] <= ent1.loc[
             'y'] + 2:
             human_to_human(simulation, ent1, ent2)
 
 
-def update_status(entity):
+def update_status(entity, simulation):
     if entity.is_z:
         entity.att['ttd'] -= ttd_rate
         if entity.att['ttd'] <= 0:
@@ -43,7 +43,7 @@ def update_status(entity):
         else:
             entity.is_z = True
             entity.att['res'] = 0
-            entity.turn_into_zombie()
+            entity.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
 
 
 def love_encounter(human, other):
@@ -106,9 +106,9 @@ def war_encounter(simulation, human, other):
     # Check if loser is dead and handle accordingly
     if loser.att['res'] <= 0 or random.random() < loser_death_rate:
         loser.att['res'] = 0
-        loser.turn_into_zombie()
-        simulation.zombies.append(loser)
-        simulation.humans.remove(loser)
+        loser.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
+        if loser in simulation.humans:  # Check if loser is in the list before removing
+            simulation.humans.remove(loser)
         for group in loser.grp.values():
             group.remove_member(human)
             gr = GrpRecord(group, loser.id, 'remove', 'war')
@@ -177,7 +177,7 @@ def kill_zombie_encounter(human, zombie):
     # log
 
 
-def infect_human_encounter(human, zombie):
+def infect_human_encounter(human, zombie, simulation):
     # Create a new zombie group and add the infected human to it
     zombie_group = Group("zombie")
     zombie_group.add_member(human)
@@ -196,7 +196,7 @@ def infect_human_encounter(human, zombie):
         gr = GrpRecord(group, human.id, 'remove', 'infect')
         gl.logs.append(gr)
 
-    human.turn_into_zombie()
+    human.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
 
 
 def human_to_human(simulation, human, other):
@@ -219,7 +219,7 @@ def human_to_human(simulation, human, other):
         el.logs.append(er)
 
 
-def human_to_zombie(human, zombie):
+def human_to_zombie(human, zombie, simulation):
     outcome = random.choices(population=['kill',
                                          'inf',
                                          'esc'],
@@ -231,7 +231,7 @@ def human_to_zombie(human, zombie):
         kill_zombie_encounter(human, zombie)
         human.xp['war'] += .5
     elif outcome[0] == 'inf':
-        infect_human_encounter(human, zombie)
+        infect_human_encounter(human, zombie, simulation)
     elif outcome[0] == 'esc':
         human.xp['esc'] += .5
         er = EncRecord(human, zombie, 'esc')

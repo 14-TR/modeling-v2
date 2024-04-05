@@ -1,7 +1,7 @@
 import random
 
-# log_path = r"C:\Users\TR\Desktop\results"
-log_path = r"C:\Users\tingram\Desktop\results"
+log_path = r"C:\Users\TR\Desktop\results"
+# log_path = r"C:\Users\tingram\Desktop\results"
 
 inf_rate = 2
 
@@ -15,7 +15,7 @@ res_lose_rate = 2
 
 max_res_gain = 5
 
-size = 50
+size = 100
 grid_size = (size, size)
 w, h = size, size
 vi = 0.025

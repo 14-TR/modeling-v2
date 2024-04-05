@@ -1,4 +1,6 @@
 import os
+import pprint
+
 import pandas as pd
 from datetime import datetime
 
@@ -6,11 +8,13 @@ from globals import global_entities
 from sim import Simulation
 from log import ml, el, rl, gl
 from config import log_path
+# from globals import reset_simulation
 
 
 
 def main():
     # Initialize the simulation
+    # reset_simulation()
     sim = Simulation()
 
     # Run the simulation and get the metrics dictionary
@@ -46,6 +50,7 @@ def main():
     # Write the metrics DataFrame to a CSV file
     metrics_df.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
 
+
     # for entity_type, entities in global_entities.items():
     #     global_entities[entity_type] = [str(entity) for entity in entities if
     #                                     entity.day == max(entity.day for entity in entities)]
@@ -57,7 +62,7 @@ def main():
     # pd.set_option('display.max_colwidth', None)  # Show full width of showing strings
     # print(global_entities_df)
     # the number of zombies from global_entities dict
-    print(len(global_entities['zombies']))
+    # print(len(global_entities['zombies']))
     return metrics_df, move_df, enc_df, res_df, grp_df
 
 
