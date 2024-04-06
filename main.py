@@ -1,9 +1,7 @@
 import os
 import pandas as pd
 from datetime import datetime
-
-from sim import Simulation
-from log import ml, el, rl, gl
+from abm import Simulation, ml, rl, gl
 from config import log_path
 
 def main():

@@ -5,6 +5,7 @@ from ents import Human, Zombie, Group, entities
 from config import grid_size, num_humans, num_zombies, epochs, days
 from events import interact
 from log import el
+from network_manager import NetworkManager
 
 
 def reset_entities():
@@ -16,6 +17,7 @@ class Simulation:
 
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
+        self.network_manager = NetworkManager()
         self.humans = [Human() for _ in range(humans)]
         self.zombies = [Zombie() for _ in range(zombies)]
         self.epochs = e
@@ -31,8 +33,10 @@ class Simulation:
 
         for human in self.humans:
             self.grid.add_ent(human)
+            self.network_manager.add_agent(human.id, 'human')
         for zombie in self.zombies:
             self.grid.add_ent(zombie)
+            self.network_manager.add_agent(zombie.id, 'zombie')
 
     def simulate_day(self):
         for human in list(self.humans):
