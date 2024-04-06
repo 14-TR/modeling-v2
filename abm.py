@@ -4,8 +4,6 @@ from config import grid_size, start_res, start_ttd, max_res_gain, ttd_rate, res_
     vi, vj, z, num_humans, num_zombies, epochs, days
 from surface_noise import generate_noise
 from util import id_generator
-from network_manager import NetworkManager
-
 
 entities = {}  # Dictionary to store all entities
 
@@ -307,7 +305,7 @@ class Entity:
     #     interact(ent1=self, ent2=other)  # Call the interact function with self and other as arguments
 
     def update_status(self, simulation):
-        from events import update_status
+        from archive.events import update_status
         update_status(self, simulation)
         if not self.is_active:
             # global_entities['removed'].append(self)
@@ -646,16 +644,17 @@ class Group:
                     break
 
     def interact(self, other):
-        from events import interact  # Import the interact function from events.py
+        from archive.events import interact  # Import the interact function from events.py
 
         if isinstance(other, Group):  # If the other is a group
             for member_id in self.members:
                 member = get_member_by_id(member_id)  # Get the Entity object
                 if member is not None:
                     for other_member_id in other.members:
-                        other_member = other.get_member_by_id(other_member_id)
+                        other_member = get_member_by_id(other_member_id)
                         if other_member is not None:
-                            interact(member, other_member)  # Call the interact function with each pair of entities
+                            interact(ent1=member,
+                                     ent2=other_member)  # Call the interact function with each pair of entities
         else:  # If the other is an individual entity
             for member_id in self.members:
                 member = get_member_by_id(member_id)

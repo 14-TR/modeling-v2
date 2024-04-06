@@ -4,8 +4,6 @@ from config import log_path
 import csv
 import os
 
-from log import MoveRecord, EncRecord, ResRecord, GrpRecord
-
 
 class IDGenerator:
     def __init__(self):
