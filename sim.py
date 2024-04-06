@@ -107,6 +107,9 @@ class Simulation:
                 peak_zombies = max(peak_zombies, len(self.zombies))
                 peak_groups = max(peak_groups, len(Group.groups))
 
+                if len(self.humans) == 0 or len(self.zombies) == 0:
+                    break
+
             # Get the final counts of humans and zombies
             ending_num_humans = len(self.humans)
             ending_num_zombies = len(self.zombies)

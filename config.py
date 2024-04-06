@@ -1,7 +1,7 @@
 import random
 
-# log_path = r"C:\Users\TR\Desktop\results"
-log_path = r"C:\Users\tingram\Desktop\results"
+log_path = r"C:\Users\TR\Desktop\results"
+# log_path = r"C:\Users\tingram\Desktop\results"
 
 inf_rate = 2
 
