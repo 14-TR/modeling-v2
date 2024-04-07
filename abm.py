@@ -1,9 +1,13 @@
+import os
 import random
+
+import networkx
 
 from config import grid_size, start_res, start_ttd, max_res_gain, ttd_rate, res_lose_rate, inf_rate, w, h, \
     vi, vj, z, num_humans, num_zombies, epochs, days
 from surface_noise import generate_noise
 from util import id_generator
+from network_manager import NetworkManager
 
 entities = {}  # Dictionary to store all entities
 
@@ -142,7 +146,7 @@ class Simulation:
 
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
-        # self.network_manager = NetworkManager()
+        self.network_manager = NetworkManager()
         self.humans = [Human() for _ in range(humans)]
         self.zombies = [Zombie() for _ in range(zombies)]
         self.epochs = e
@@ -158,10 +162,12 @@ class Simulation:
 
         for human in self.humans:
             self.grid.add_ent(human)
-            # self.network_manager.add_agent(human.id, 'human')
+            self.network_manager.add_agent(human.id, 'human')
+            human.network_manager = self.network_manager
         for zombie in self.zombies:
             self.grid.add_ent(zombie)
-            # self.network_manager.add_agent(zombie.id, 'zombie')
+            self.network_manager.add_agent(zombie.id, 'zombie')
+            zombie.network_manager = self.network_manager
 
     def simulate_day(self):
         for human in list(self.humans):
@@ -212,6 +218,15 @@ class Simulation:
         # Reset the DayTracker, Epoch and Group class variables
         DayTracker.reset()
         Group.reset_groups()
+
+    def save_network_state(self):
+        # Create directory if it doesn't exist
+        if not os.path.exists('network_states'):
+            os.makedirs('network_states')
+
+        # Save the graph to a file
+        # filename = f'network_states/network_epoch_{self.current_epoch}.gpickle'
+        # networkx.write_gpickle(self.network_manager.G, filename)
 
     def run(self):
         # Initialize the list for metrics
@@ -266,8 +281,9 @@ class Simulation:
 
             metrics.update(enc_types)
             metrics_list.append(metrics)
+            # self.save_network_state()
 
-            self.__init__()
+            # self.__init__()
 
             encounter_logs.append(el.logs.copy())
             el.logs.clear()
@@ -279,10 +295,11 @@ class Simulation:
 class Entity:
     grid = Grid(grid_size=grid_size)
 
-    def __init__(self, grid=grid, entity_type=''):
+    def __init__(self, grid=grid, entity_type='', network_manager=None):
         self.id = id_generator.gen_id(entity_type)  # Generate a unique ID for the entity
         entities[self.id] = self  # Add the entity to the global entities dictionary
         # print(len(entities))
+        self.network_manager = network_manager
         self.loc = {'x': 0, 'y': 0, 'z': 0}  # Default location
         self.att = {'res': 0, 'ttd': 0}  # Default attributes
         self.is_z = False  # Default zombie flag
@@ -305,7 +322,6 @@ class Entity:
     #     interact(ent1=self, ent2=other)  # Call the interact function with self and other as arguments
 
     def update_status(self, simulation):
-        from archive.events import update_status
         update_status(self, simulation)
         if not self.is_active:
             # global_entities['removed'].append(self)
@@ -477,15 +493,15 @@ class Human(Entity):
             for member in adjacent_group_members:
                 member.att['res'] = distributed_resource
 
-    def turn_into_zombie(self, on_turn_into_zombie_callback):
+    def turn_into_zombie(self, inf_by=None):
         new_zombie = Zombie(ttd=start_ttd)
         new_zombie.loc = self.loc.copy()
         new_zombie.id = self.id.replace('_H', '_Z')  # Change the ID suffix from 'H' to 'Z'
 
-        gl.log(self, new_zombie, 'turn', 'zombie')
+        gl.log(self, new_zombie, 'add', 'new zombie')
 
-        if on_turn_into_zombie_callback:
-            on_turn_into_zombie_callback(self, new_zombie)
+        # if on_turn_into_zombie_callback:
+        #     on_turn_into_zombie_callback(self, new_zombie)
 
         # remove human from human groups
         for group_id in self.grp.keys():
@@ -499,6 +515,12 @@ class Human(Entity):
         if self.id in entities:  # Check if the entity is in the dictionary before removing
             entities.pop(self.id)
         entities[new_zombie.id] = new_zombie
+
+        self.network_manager.add_agent(new_zombie.id, 'zombie')
+
+        if inf_by is not None:
+            self.network_manager.add_edge(new_zombie.id, inf_by.id)
+            # print(f"Added edge from {inf_by.id} to {new_zombie.id}")
 
 
 class Zombie(Entity):
@@ -618,15 +640,17 @@ class Zombie(Entity):
 class Group:
     groups = []
 
-    def __init__(self, type):
+    def __init__(self, type, network_manager):
         self.type = type
         self.id = (f"HG_{id_generator.gen_id('H')}" if type == "human" else f"ZG_{id_generator.gen_id('Z')}")
         entities[self.id] = self
+        self.network_manager = network_manager
         self.members = []
         Group.groups.append(self)
 
     def add_member(self, entity):
         self.members.append(entity)
+        self.network_manager.add_agent(entity.id, 'human' if entity.is_h else 'zombie')
 
     def remove_member(self, entity):
         for member_id in self.members:
@@ -636,11 +660,13 @@ class Group:
                     gl.log(self, entity, 'remove', 'decayed')
                     if member in self.members:  # Check if the member is in the list
                         self.members.remove(member)
+                    self.network_manager.remove_agent(member.id)
                     break
                 elif not member.is_z == entity.is_z and member.id == entity.id:
                     gl.log(self, entity, 'remove', 'starved')
                     if member in self.members:  # Check if the member is in the list
                         self.members.remove(member)
+                    self.network_manager.remove_agent(member.id)
                     break
 
     def interact(self, other):
@@ -667,6 +693,7 @@ class Group:
         cls.groups.clear()
         for group in cls.groups:
             del group  # Delete the group object
+
 
 # ==================================================================
 
@@ -714,7 +741,8 @@ class EncRecord:
         self.action = action
 
     def __dict__(self):
-        return {'Epoch': self.epoch, 'Day': self.day, 'Entity 1': self.ent_id, 'Entity 2': self.other_id, 'Interaction Type': self.action}
+        return {'Epoch': self.epoch, 'Day': self.day, 'Entity 1': self.ent_id, 'Entity 2': self.other_id,
+                'Interaction Type': self.action}
 
     def __str__(self):
         return f"{self.epoch},{self.day},{self.ent_id},{self.other_id},{self.action}"
@@ -865,7 +893,7 @@ def interact(simulation, ent1, ent2):
     else:
         if ent1.loc['x'] - 2 <= ent2.loc['x'] <= ent1.loc['x'] + 2 and ent1.loc['y'] - 2 <= ent2.loc['y'] <= ent1.loc[
             'y'] + 2:
-            human_to_human(simulation, ent1, ent2)
+            human_to_human(ent1, ent2, simulation)
 
 
 def update_status(entity, simulation):
@@ -879,10 +907,10 @@ def update_status(entity, simulation):
         else:
             entity.is_z = True
             entity.att['res'] = 0
-            entity.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
+            entity.turn_into_zombie()
 
 
-def love_encounter(human, other):
+def love_encounter(human, other, simulation):
     amount = (human.att['res'] + other.att['res']) / 2
     human.att['res'] = other.att['res'] = amount
     human.enc['luv'] += 1
@@ -893,11 +921,13 @@ def love_encounter(human, other):
     # creates a group between the two entities if they are not already group mates
     for group_id in human.grp.keys():
         if group_id in entities:  # Check if the Group object exists
+            # add edge between the two entities in the network
+            human.network_manager.add_edge(human.id, other.id)
             group = entities[group_id]  # Get the Group object
             if other.id in group.members:
                 break
     else:
-        group = Group("human")
+        group = Group("human", network_manager=simulation.network_manager)
         group.members.append(human.id)
         group.members.append(other.id)
         human.grp[group.id] = group
@@ -915,7 +945,7 @@ def love_encounter(human, other):
     rl.logs.append(rr)
 
 
-def war_encounter(simulation, human, other):
+def war_encounter(human, other, simulation):
     from config import loser_survival_rate, loser_death_rate
 
     # Determine the winner and loser based on war_xp
@@ -942,7 +972,7 @@ def war_encounter(simulation, human, other):
     # Check if loser is dead and handle accordingly
     if loser.att['res'] <= 0 or random.random() < loser_death_rate:
         loser.att['res'] = 0
-        loser.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
+        loser.turn_into_zombie()
         if loser in simulation.humans:  # Check if loser is in the list before removing
             simulation.humans.remove(loser)
         for group in loser.grp.values():
@@ -1015,8 +1045,9 @@ def kill_zombie_encounter(human, zombie):
 
 def infect_human_encounter(human, zombie, simulation):
     # Create a new zombie group and add the infected human to it
-    zombie_group = Group("zombie")
+    zombie_group = Group("zombie", network_manager=simulation.network_manager)
     zombie_group.add_member(human)
+
     gr = GrpRecord(zombie_group, human.id, 'add', 'infect')
     gl.logs.append(gr)
 
@@ -1032,10 +1063,10 @@ def infect_human_encounter(human, zombie, simulation):
         gr = GrpRecord(group, human.id, 'remove', 'infect')
         gl.logs.append(gr)
 
-    human.turn_into_zombie(on_turn_into_zombie_callback=simulation.handle_turn_into_zombie)
+    human.turn_into_zombie(inf_by=zombie)
 
 
-def human_to_human(simulation, human, other):
+def human_to_human(human, other, simulation):
     outcome = random.choices(population=['love', 'war', 'rob', 'run'],
                              weights=[abs(human.xp['luv'] + other.xp['luv'] + 0.1),
                                       abs(human.xp['war'] + other.xp['war'] + 0.1),
@@ -1043,9 +1074,9 @@ def human_to_human(simulation, human, other):
                                       abs(human.xp['esc'] + other.xp['esc'] + 0.1)
                                       ])
     if outcome[0] == 'love':
-        love_encounter(human, other)
+        love_encounter(human, other, simulation)
     elif outcome[0] == 'war':
-        war_encounter(simulation, human, other)
+        war_encounter(human, other, simulation)
     elif outcome[0] == 'rob':
         theft_encounter(human, other)
     elif outcome[0] == 'esc':
@@ -1074,11 +1105,11 @@ def human_to_zombie(human, zombie, simulation):
         el.logs.append(er)
 
 
-def zombie_to_human(zombie, other):
+def zombie_to_human(zombie, other, simulation):
     inf_event = random.choices([True, False],
                                [inf_rate, (1 - inf_rate) + other.xp['esc'] + 0.1])
     if inf_event[0]:
-        infect_human_encounter(other, zombie)
+        infect_human_encounter(other, zombie, simulation)
     else:
         other.xp['esc'] += .5
         er = EncRecord(other, zombie, 'esc')
