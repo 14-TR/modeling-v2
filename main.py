@@ -4,6 +4,7 @@ from datetime import datetime
 from abm import Simulation, ml, rl, gl
 from config import log_path
 from network_manager import NetworkManager
+from mapping import SurfaceMapper
 
 
 def main():
@@ -27,13 +28,13 @@ def main():
     metrics_df = pd.DataFrame(metrics_list)
 
     # Gather network analysis statistics
-    # network_statistics = sim.network_manager.gather_statistics()
+    network_statistics = sim.network_manager.gather_statistics()
 
     # Convert the network statistics dictionary to a DataFrame
-    # network_statistics_df = pd.DataFrame(network_statistics)
+    network_statistics_df = pd.DataFrame(network_statistics)
 
     # Append the network statistics to the metrics DataFrame
-    # metrics_df = pd.concat([metrics_df, network_statistics_df], axis=1)
+    network_statistics_df.to_csv(os.path.join(new_log_path, "network_statistics.csv"), index=False)
 
     # Append the encounter logs for each epoch to the DataFrame
     for logs in encounter_logs:
@@ -80,6 +81,10 @@ def main():
     # print("Edges in the general graph: ", general_graph_edges)
     print("Edges in the human graph: ", human_graph_edges)
     print("Edges in the zombie graph: ", zombie_graph_edges)
+
+    elev_data = sim.grid.surface
+    mapper = SurfaceMapper(elev_data, new_log_path)
+    mapper.plot_surface()
 
     return metrics_df, move_df, enc_df, res_df, grp_df
 

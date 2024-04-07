@@ -53,16 +53,16 @@ class NetworkManager:
             'clustering_coefficient': clustering_coefficient
         }
 
-    # def gather_statistics(self):
-    #     analysis_results = self.perform_analysis()
-    #
-    #     for metric, values in analysis_results.items():
-    #         print(f"{metric}:")
-    #         for node, value in values.items():
-    #             print(f"Node {node}: {value}")
-    #         print("\n")
-    #
-    #     return analysis_results
+    def gather_statistics(self):
+        analysis_results = self.perform_analysis()
+
+        # for metric, values in analysis_results.items():
+        #     print(f"{metric}:")
+        #     for node, value in values.items():
+        #         print(f"Node {node}: {value}")
+        #     print("\n")
+
+        return analysis_results
 
     def add_edge(self, a1, a2):
         if a1 in self.G and 'type' in self.G.nodes[a1] and a2 in self.G and 'type' in self.G.nodes[

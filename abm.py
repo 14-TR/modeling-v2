@@ -4,7 +4,7 @@ import random
 import networkx
 
 from config import grid_size, start_res, start_ttd, max_res_gain, ttd_rate, res_lose_rate, inf_rate, w, h, \
-    vi, vj, z, num_humans, num_zombies, epochs, days
+    vi, vj, z, num_humans, num_zombies, epochs, days, hunger
 from surface_noise import generate_noise
 from util import id_generator
 from network_manager import NetworkManager
@@ -382,7 +382,7 @@ class Human(Entity):
             # print(f"Starve count: {len(starve_cnt)}")
 
     def prob_move_res(self):
-        return random.random() < (1 - self.att['res'] / 10)
+        return hunger < (1 - self.att['res'] / 10)
 
     def prob_move_grp(self):
         # Calculate the total resources of all group members

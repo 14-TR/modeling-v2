@@ -5,27 +5,23 @@ log_path = r"C:\Users\TR\Desktop\results"
 
 inf_rate = 2
 
-
-def get_random_res():
-    return random.randint(10, 20)
-
-
-start_res = get_random_res()
+start_res = random.randint(10, 20)
 
 start_ttd = random.randint(10, 20)
 
 ttd_rate = .5
 
-res_lose_rate = .5
+res_lose_rate = 1
+hunger = res_lose_rate*2
 
 max_res_gain = 5
 
-size = 50
+size = 100
 grid_size = (size, size)
 w, h = size, size
-vi = 0.025
-vj = 0.025
-z = 4
+vi = 0.125
+vj = 0.125
+z = .5
 
 num_humans = 100
 

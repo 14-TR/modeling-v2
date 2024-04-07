@@ -13,9 +13,15 @@ import numpy as np
 import perlin as p
 from config import vi, vj, z, w, h
 
+vi = vi
+vj = vj
+z = z
+w = w
+h = h
+
 #generate a 2d grid of perlin noise that is 20 by 20
 def generate_noise(w, h, vi, vj, z):
-    noise = p.Perlin(14)
+    noise = p.Perlin(1414)
     grid = np.zeros((w, h))
     for i in range(w):
         for j in range(h):
