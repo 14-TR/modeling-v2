@@ -669,8 +669,7 @@ class Group:
                     self.network_manager.remove_agent(member.id)
                     break
 
-    def interact(self, other):
-        from archive.events import interact  # Import the interact function from events.py
+    def interact(self, other): # Import the interact function from events.py
 
         if isinstance(other, Group):  # If the other is a group
             for member_id in self.members:
