@@ -5,9 +5,9 @@ log_path = r"C:\Users\tingram\Desktop\results"
 
 inf_rate = 2
 
-start_res = random.randint(10, 20)
+start_res = float(random.randint(10, 20))
 
-start_ttd = random.randint(10, 20)
+start_ttd = float(random.randint(10, 20))
 
 ttd_rate = .5
 
