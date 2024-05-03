@@ -232,8 +232,8 @@ def run_simulation(num_runs, num_episodes, grid_width, grid_height, num_resource
 # Parameters for the simulation
 num_runs = 1
 num_episodes = 100
-grid_width = 10
-grid_height = 10
+grid_width = 100
+grid_height = 100
 num_resources = 3
 num_agents = 2
 

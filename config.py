@@ -35,3 +35,5 @@ days = 365
 loser_survival_rate = 0.25  # The loser keeps % of their resources
 
 loser_death_rate = 0.5  # chance that the loser is killed
+
+num_resources = 10
