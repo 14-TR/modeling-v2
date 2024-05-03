@@ -289,7 +289,7 @@ class Human(Entity):
                 for m in members:
                     m.att['res'] = avg_res
 
-    def turn_into_zombie(self):
+    def turn_into_zombie(self, inf_by=None):
         new_zombie = Zombie(ttd=start_ttd)
         new_zombie.loc = self.loc.copy()
         new_zombie.id = self.id.replace('_H', '_Z')
