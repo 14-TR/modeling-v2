@@ -865,3 +865,762 @@ def get_member_by_id(member_id):
 
 # if __name__ == '__main__':
 #     metrics_df, move_df, res_df, enc_df, grp_df = main()
+
+import numpy as np
+import random
+import pandas as pd
+import json
+
+from matplotlib import pyplot as plt
+
+
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return super(NumpyEncoder, self).default(obj)
+
+
+def save_to_json(data, filename):
+    with open(filename, 'w') as f:
+        json.dump(data, f, cls=NumpyEncoder, indent=4)
+
+
+def load_from_json(filename):
+    with open(filename, 'r') as f:
+        return json.load(f)
+
+
+class Grid:
+    def __init__(self, width, height, num_resources):
+        self.width = width
+        self.height = height
+        self.resources_count = num_resources
+        self.resources = self.generate_resources(num_resources)
+        self.initial_resources = self.resources.copy()
+
+    def get_resource_positions(self):
+        """Returns a list of tuples, each containing the coordinates of a resource."""
+        return list(self.resources)
+
+    def generate_resources(self, num_resources):
+        return {(random.randint(0, self.width - 1), random.randint(0, self.height - 1)) for _ in range(num_resources)}
+
+    def remove_resource(self, x, y):
+        if (x, y) in self.resources:
+            self.resources.remove((x, y))
+            self.resources_count -= 1
+
+    def get_nearest_res_pnt(self, x, y):
+        nearest_resource = None
+        min_distance = float('inf')
+        for res in self.resources:
+            distance = np.sqrt((res[0] - x) ** 2 + (res[1] - y) ** 2)
+            if distance < min_distance:
+                min_distance = distance
+                nearest_resource = res
+        return nearest_resource if nearest_resource else (0, 0)
+
+    def get_distance_to_nearest_res_pnt(self, x, y):
+        nearest_resource = self.get_nearest_res_pnt(x, y)
+        return np.sqrt((nearest_resource[0] - x) ** 2 + (nearest_resource[1] - y) ** 2)
+
+    def current_resource_count(self):
+        return self.resources_count
+
+    def get_initial_resource_positions(self):
+        """Returns a list of tuples, each containing the initial coordinates of a resource."""
+        return list(self.initial_resources)
+
+
+class SimpleAgent:
+    def __init__(self, id, grid, loc=(0, 0), learning_rate=0.1, discount_factor=0.95, exploration_rate=1.0,
+                 exploration_decay=0.995, min_exploration_rate=0.01):
+        self.id = id
+        self.grid = grid
+        self.loc = {'x': loc[0], 'y': loc[1]}
+        self.q_table = np.zeros((grid.width * grid.height, 2))
+        self.learning_rate = learning_rate
+        self.discount_factor = discount_factor
+        self.exploration_rate = exploration_rate
+        self.exploration_decay = exploration_decay
+        self.min_exploration_rate = min_exploration_rate
+        self.cumulative_reward = 0
+        self.past_rewards = []
+        self.history = []
+        self.path = []
+
+    def log(self, action, reward):
+        self.history.append((action, reward))
+
+    def plot_history(self):
+        actions, rewards = zip(*self.history)
+        plt.figure(figsize=(12, 6))
+        plt.subplot(1, 2, 1)
+        plt.plot(actions)
+        plt.xlabel('Episode')
+        plt.ylabel('Action')
+        plt.title('Agent Actions Over Time')
+        plt.subplot(1, 2, 2)
+        plt.plot(rewards)
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.title('Agent Rewards Over Time')
+        plt.tight_layout()
+        plt.show()
+
+    def save_q_table(self, filename):
+        np.save(filename, self.q_table)
+
+    def load_q_table(self, filename):
+        self.q_table = np.load(filename)
+
+    def get_state(self):
+        return self.grid.width * self.loc['y'] + self.loc['x']
+
+    def choose_action(self, state):
+        if random.random() < self.exploration_rate:
+            return random.choice([0, 1])
+        else:
+            return np.argmax(self.q_table[state])
+
+    def update_q_table(self, state, action, reward, next_state):
+        future_rewards = np.max(self.q_table[next_state])
+        estimated_q = self.q_table[state, action]
+        self.q_table[state, action] += self.learning_rate * (
+                reward + self.discount_factor * future_rewards - estimated_q)
+
+    def move_towards_resource(self):
+        nearest_res = self.grid.get_nearest_res_pnt(self.loc['x'], self.loc['y'])
+
+        dx = np.sign(nearest_res[0] - self.loc['x'])
+        dy = np.sign(nearest_res[1] - self.loc['y'])
+
+        new_x = self.loc['x'] + dx
+        new_y = self.loc['y'] + dy
+
+        if abs(new_x - self.loc['x']) <= 1 and abs(new_y - self.loc['y']) <= 1:
+            if (new_x, new_y) in self.grid.resources:
+                self.grid.remove_resource(new_x, new_y)
+                self.cumulative_reward += 10
+
+        self.loc['x'] += dx
+        self.loc['y'] += dy
+
+        self.path.append((self.loc['x'], self.loc['y']))
+
+    def get_movements(self):
+        movements = []
+        for i in range(1, len(self.path)):
+            old_position = self.path[i - 1]
+            new_position = self.path[i]
+            movements.append((new_position))
+        return movements
+
+    def update(self):
+        state = self.get_state()
+        action = self.choose_action(state)
+        old_distance = self.grid.get_distance_to_nearest_res_pnt(self.loc['x'], self.loc['y'])
+        if action == 0:
+            self.move_towards_resource()
+        new_distance = self.grid.get_distance_to_nearest_res_pnt(self.loc['x'], self.loc['y'])
+        if new_distance < old_distance:
+            reward = 2
+        elif new_distance == old_distance:
+            reward = 0
+        else:
+            reward = -1
+        reward *= 1 / (1 + self.grid.get_distance_to_nearest_res_pnt(self.loc['x'], self.loc['y']))
+        self.cumulative_reward += reward
+        self.past_rewards.append(reward)
+        if len(self.past_rewards) > 100:
+            self.past_rewards.pop(0)
+        next_state = self.get_state()
+        self.update_q_table(state, action, reward, next_state)
+        self.exploration_decay = min(max(self.exploration_decay, 0.01), 0.99)
+        self.exploration_rate *= self.exploration_decay
+        self.exploration_rate = max(self.exploration_rate, self.min_exploration_rate)
+        self.log(action, reward)
+        self.history.append({
+            'action': action,
+            'reward': reward,
+            'remaining_resources': self.grid.current_resource_count(),
+            'position': (self.loc['x'], self.loc['y']),
+            'cumulative_reward': self.cumulative_reward
+        })
+
+    def print_history(self):
+        print(f"History for Agent {self.id}:")
+        for i, (action, reward) in enumerate(self.history):
+            print(f"Episode {i + 1}: Action = {action}, Reward = {reward}")
+
+
+def run_simulation(num_runs, num_episodes, grid_width, grid_height, num_resources, num_agents):
+    all_runs_cumulative_rewards = []
+    all_agents_histories = []
+
+    for run in range(num_runs):
+        print(f"Starting Run {run + 1}/{num_runs}")
+        simulation_grid = Grid(grid_width, grid_height, num_resources)
+
+        agents = [SimpleAgent(id=i, grid=simulation_grid,
+                              loc=(random.randint(0, grid_width - 1), random.randint(0, grid_height - 1))) for i in
+                  range(num_agents)]
+
+        run_cumulative_rewards = []
+        run_histories = []
+
+        for episode in range(num_episodes):
+            episode_rewards = []
+            episode_histories = []
+
+            for agent in agents:
+                agent.update()
+                episode_rewards.append(agent.cumulative_reward)
+                episode_histories.append({
+                    'agent_id': agent.id,
+                    'cumulative_reward': agent.cumulative_reward,
+                    'history': agent.history[-1],
+                })
+
+            run_cumulative_rewards.append(np.mean(episode_rewards))
+            run_histories.append(episode_histories)
+
+        all_runs_cumulative_rewards.append(run_cumulative_rewards)
+        all_agents_histories.append(run_histories)
+
+    return all_runs_cumulative_rewards, all_agents_histories, simulation_grid, agents
+
+
+# Parameters for the simulation
+num_runs = 1
+num_episodes = 100
+grid_width = 10
+grid_height = 10
+num_resources = 3
+num_agents = 2
+
+# Run the simulation
+all_runs_cumulative_rewards, all_agents_histories, simulation_grid, agents = run_simulation(num_runs, num_episodes,
+                                                                                            grid_width, grid_height,
+                                                                                            num_resources, num_agents)
+
+
+def plot_agent_paths(agents, resources):
+    plt.figure(figsize=(8, 8))
+
+    # Plot resource points
+    resource_x_coords = [res[0] for res in resources]
+    resource_y_coords = [res[1] for res in resources]
+    plt.scatter(resource_x_coords, resource_y_coords, color='red', marker='x', s=100, label='Resources')
+
+    # Loop through each agent
+    for agent in agents:
+        # Get the agent's path
+        path = agent.path
+
+        # Plot the agent's path
+        x_coords = [pos[0] for pos in path]
+        y_coords = [pos[1] for pos in path]
+        plt.plot(x_coords, y_coords, marker='o', linestyle='-', label=f'Agent {agent.id}')
+
+    plt.title('Agent Movements and Resource Locations Over Episodes')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+# Plotting Resource Changes
+# def plot_resource_changes(agents_histories):
+#     plt.figure(figsize=(10, 5))
+#     episodes = list(range(len(agents_histories[0][0]['history'])))
+#     for agent_hist in agents_histories[0]:
+#         resources = [step['remaining_resources'] for step in agent_hist['history']]
+#         plt.plot(episodes, resources, marker='o', label=f'Agent {agent_hist["agent_id"]}')
+#     plt.title('Resource Changes Over Episodes')
+#     plt.xlabel('Episode')
+#     plt.ylabel('Remaining Resources')
+#     plt.legend()
+#     plt.grid(True)
+#     plt.show()
+
+# Assuming you have run the simulation and have the required data
+
+resources = simulation_grid.get_initial_resource_positions()
+
+plot_agent_paths(agents, resources)
+# plot_resource_changes(all_agents_histories)
+
+import random
+
+# log_path = r"C:\Users\TR\Desktop\results"
+log_path = r"C:\Users\tingram\Desktop\results"
+
+inf_rate = 2
+
+start_res = float(random.randint(10, 20))
+
+start_ttd = float(random.randint(10, 20))
+
+ttd_rate = .5
+
+res_lose_rate = 1
+hunger = res_lose_rate*2
+
+max_res_gain = 5
+
+size = 100
+grid_size = (size, size)
+w, h = size, size
+vi = 0.025
+vj = 0.025
+z = .5
+
+
+num_humans = 100
+
+num_zombies = 5
+
+epochs = 1
+
+days = 365
+
+loser_survival_rate = 0.25  # The loser keeps % of their resources
+
+loser_death_rate = 0.5  # chance that the loser is killed
+
+import os
+import pandas as pd
+from datetime import datetime
+from abm import Simulation, ml, rl, gl
+from config import log_path
+from network_manager import NetworkManager
+from mapping import SurfaceMapper
+
+
+def main():
+    # Initialize the simulation
+    sim = Simulation()
+
+    # Generate a unique folder name using the current timestamp
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    new_log_path = os.path.join(log_path, timestamp)
+
+    # Create the new folder
+    os.makedirs(new_log_path, exist_ok=True)
+
+    # Initialize an empty DataFrame for the encounter logs
+    enc_df = pd.DataFrame(columns=["Epoch", "Day", "Entity 1", "Entity 2", "Interaction Type"])
+
+    # Run the simulation and get the metrics dictionary and encounter logs
+    metrics_list, encounter_logs = sim.run()
+
+    # Convert the metrics dictionary to a DataFrame
+    metrics_df = pd.DataFrame(metrics_list)
+
+    # Gather network analysis statistics
+    network_statistics = sim.network_manager.gather_statistics()
+
+    # Convert the network statistics dictionary to a DataFrame
+    network_statistics_df = pd.DataFrame(network_statistics)
+
+    # Append the network statistics to the metrics DataFrame
+    network_statistics_df.to_csv(os.path.join(new_log_path, "network_statistics.csv"), index=False)
+
+    # Append the encounter logs for each epoch to the DataFrame
+    for logs in encounter_logs:
+        enc_df = enc_df._append(pd.DataFrame([str(record).split(',') for record in logs],
+                                             columns=["Epoch", "Day", "Entity 1", "Entity 2", "Interaction Type"]))
+
+    # Create dataframes for each log and write them to CSV files in the new folder
+    move_df = pd.DataFrame([str(record).split(',') for record in ml.logs],
+                           columns=["Epoch", "Day", "Entity", "Old X", "Old Y", "Old Z", "New X", "New Y", "New Z"])
+    move_df.to_csv(os.path.join(new_log_path, "move_log.csv"), index=False)
+
+    res_df = pd.DataFrame([str(record).split(',') for record in rl.logs],
+                          columns=["Epoch", "Day", "Entity", "Resource Change", "Current Resources", "Reason"])
+    res_df.to_csv(os.path.join(new_log_path, "res_log.csv"), index=False)
+
+    grp_df = pd.DataFrame([str(record).split(',') for record in gl.logs],
+                          columns=["Epoch", "Day", "Group", "Entity", "Action", "Reason"])
+    grp_df.to_csv(os.path.join(new_log_path, "grp_log.csv"), index=False)
+
+    # Write the metrics DataFrame to a CSV file
+    metrics_df.to_csv(os.path.join(new_log_path, "metrics_log.csv"), index=False)
+
+    # Write the encounter logs DataFrame to a CSV file
+    enc_df.to_csv(os.path.join(new_log_path, "enc_log.csv"), index=False)
+
+    # visualize the network
+    sim.network_manager.visualize_network('human')
+    sim.network_manager.visualize_network('zombie')
+
+    # sim.network_manager.visualize_network('all')
+
+    # general_graph_nodes = list(sim.network_manager.G.nodes())
+    # human_graph_nodes = list(sim.network_manager.H.nodes())
+    # zombie_graph_nodes = list(sim.network_manager.Z.nodes())
+    #
+    # print("Nodes in the general graph: ", general_graph_nodes)
+    # print("Nodes in the human graph: ", human_graph_nodes)
+    # print("Nodes in the zombie graph: ", zombie_graph_nodes)
+
+    # general_graph_edges = len(list(sim.network_manager.G.edges()))
+    human_graph_edges = len(list(sim.network_manager.H.edges()))
+    zombie_graph_edges = len(list(sim.network_manager.Z.edges()))
+
+    # print("Edges in the general graph: ", general_graph_edges)
+    print("Edges in the human graph: ", human_graph_edges)
+    print("Edges in the zombie graph: ", zombie_graph_edges)
+
+    elev_data = sim.grid.surface
+    mapper = SurfaceMapper(elev_data, new_log_path)
+    mapper.plot_surface()
+
+    return metrics_df, move_df, enc_df, res_df, grp_df
+
+
+if __name__ == '__main__':
+    metrics_df, move_df, enc_df, res_df, grp_df = main()
+
+import os
+
+import numpy as np
+from matplotlib import pyplot as plt
+from config import grid_size
+
+
+class SurfaceMapper:
+    def __init__(self, elevation_data, path, grid_size=grid_size):
+        self.elevation_data = elevation_data
+        self.path = path
+        self.grid_size = grid_size
+
+    def plot_surface(self):
+        # Create a meshgrid for the x and y coordinates
+        x = np.linspace(0, self.grid_size[0], num=self.elevation_data.shape[1])
+        y = np.linspace(0, self.grid_size[1], num=self.elevation_data.shape[0])
+        x, y = np.meshgrid(x, y)
+
+        # Create a 3D plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Plot the surface
+        ax.plot_surface(x, y, self.elevation_data, cmap='terrain')
+
+        # Set labels
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Elevation')
+
+        # Show the plot
+        plt.show()
+        plt.savefig(os.path.join(self.path, "elevation_surface.png"))
+import networkx as nx
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+class NetworkManager:
+    def __init__(self):
+        self.G = nx.Graph()  # Initialize an empty graph
+        self.H = nx.Graph()  # Initialize an empty graph
+        self.Z = nx.Graph()  # Initialize an empty graph
+        print("Initialized an empty graph.")
+
+    # Add an agent to the network
+    def add_agent(self, agent_id, agent_type):
+        self.G.add_node(agent_id, type=agent_type)
+        if agent_type == 'human':
+            self.H.add_node(agent_id, type=agent_type)
+        elif agent_type == 'zombie':
+            self.Z.add_node(agent_id, type=agent_type)
+
+    def remove_agent(self, agent_id):
+        if self.G.has_node(agent_id):
+            self.G.nodes[agent_id]['status'] = 'dead'
+            # print(f"Changed status of agent {agent_id} to 'dead'.")
+        else:
+            print(f"Node {agent_id} does not exist in the graph.")
+
+    def add_interaction(self, agent1_id, agent2_id, interaction_type):
+        self.G.add_edge(agent1_id, agent2_id, interaction=interaction_type)
+        print(f"Added interaction between {agent1_id} and {agent2_id}.")
+
+    def perform_analysis(self):
+        # Calculate degree centrality
+        degree_centrality = nx.degree_centrality(self.G)
+
+        # Calculate betweenness centrality
+        betweenness_centrality = nx.betweenness_centrality(self.G)
+
+        # Calculate closeness centrality
+        closeness_centrality = nx.closeness_centrality(self.G)
+
+        # Calculate eigenvector centrality
+        eigenvector_centrality = nx.eigenvector_centrality(self.G)
+
+        # Calculate clustering coefficient
+        clustering_coefficient = nx.clustering(self.G)
+
+        return {
+            'degree_centrality': degree_centrality,
+            'betweenness_centrality': betweenness_centrality,
+            'closeness_centrality': closeness_centrality,
+            'eigenvector_centrality': eigenvector_centrality,
+            'clustering_coefficient': clustering_coefficient
+        }
+
+    def gather_statistics(self):
+        analysis_results = self.perform_analysis()
+
+        # for metric, values in analysis_results.items():
+        #     print(f"{metric}:")
+        #     for node, value in values.items():
+        #         print(f"Node {node}: {value}")
+        #     print("\n")
+
+        return analysis_results
+
+    def add_edge(self, a1, a2):
+        if a1 in self.G and 'type' in self.G.nodes[a1] and a2 in self.G and 'type' in self.G.nodes[
+            a2]:
+            self.G.add_edge(a1, a2)
+            agent1_type = self.G.nodes[a1]['type']
+            agent2_type = self.G.nodes[a2]['type']
+            if agent1_type == 'human' and agent2_type == 'human':
+                self.H.add_edge(a1, a2)
+            elif agent1_type == 'zombie' and agent2_type == 'zombie':
+                self.Z.add_edge(a1, a2)
+        else:
+            print(f"Nodes {a1} and/or {a2} do not exist in the graph or do not have a 'type' attribute.")
+
+    def remove_edge(self, node1, node2):
+        self.G.remove_edge(node1, node2)
+        print(f"Removed edge between {node1} and {node2}.")
+
+
+    def visualize_network(self, network_type):
+        # Select the appropriate graph
+        if network_type == 'human':
+            G = self.H
+        elif network_type == 'zombie':
+            G = self.Z
+        else:
+            G = self.G
+
+        # Generate random 3D positions for each node
+        pos = {node: (np.random.rand(), np.random.rand(), np.random.rand()) for node in G.nodes()}
+
+        # Set up 3D plot
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Extract node positions
+        xs, ys, zs = [], [], []
+        for node, (x, y, z) in pos.items():
+            xs.append(x)
+            ys.append(y)
+            zs.append(z)
+
+        # Plot nodes
+        ax.scatter(xs, ys, zs)
+
+        # Plot edges
+        for edge in G.edges():
+            x, y, z = zip(*[pos[node] for node in edge])
+            ax.plot(x, y, z, color='black')  # Customize color as needed
+
+        # Customize the axes and display
+        ax.set_xlabel('X axis')
+        ax.set_ylabel('Y axis')
+        ax.set_zlabel('Z axis')
+        plt.show()
+
+
+
+#########################################################
+"""
+
+Title: surface_noise.py
+Author: TR Ingram
+Description:
+
+
+"""
+#########################################################
+
+import numpy as np
+import perlin as p
+from config import vi, vj, z, w, h
+
+vi = vi
+vj = vj
+z = z
+w = w
+h = h
+
+#generate a 2d grid of perlin noise that is 20 by 20
+def generate_noise(w, h, vi, vj, z):
+    noise = p.Perlin(1414)
+    grid = np.zeros((w, h))
+    for i in range(w):
+        for j in range(h):
+            grid[i, j] = noise.noise(i*vi, j*vj, z)
+    return grid
+
+# noise = p.Perlin(14)
+# w=100
+# h=100
+# grid = np.zeros((w, h))
+# for i in range(w):
+#     for j in range(h):
+#         grid[i,j] = noise.noise(i*0.1, j*0.2, 0)
+#
+# grid = generate_noise(100, 100, 0.025, 0.025, 4)
+#
+# # plot grid
+# plt.imshow(grid, cmap='terrain')
+# plt.colorbar()
+# plt.title('2D Perlin Noise')
+# plt.show()
+
+
+import datetime
+import random
+from config import log_path
+import csv
+import os
+
+
+class IDGenerator:
+    def __init__(self):
+        self.characters = "123456789ABCDEFG"
+        self.used_ids = set()
+
+    def gen_id(self, entity_type):
+        while True:
+            new_id = ''.join(random.choices(self.characters, k=6))
+            if new_id not in self.used_ids:
+                self.used_ids.add(new_id)
+                return new_id + "_" +entity_type
+
+
+# Create a global instance of IDGenerator
+id_generator = IDGenerator()
+
+
+def write_logs_to_csv(log, log_type):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")  # Get the current date and time
+    dir_path = os.path.join(log_path, timestamp)  # Append the timestamp to the log_path
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    file_path = os.path.join(dir_path, log_type + "_log.csv")
+
+    # Open the file in append mode. This will create the file if it doesn't exist.
+    with open(file_path, 'a+', newline='') as file:
+        writer = csv.writer(file)
+        if log_type == "move":
+            writer.writerow(
+                ["Epoch", "Day", "Entity", "Old Location X", "Old Location Y", "Old Z", "New Location X", "New Location Y", "New Z"])
+            for record in log.logs:
+                writer.writerow(
+                    str(record).split(','))  # Convert the record object to a string and split it into a list
+        elif log_type == "enc":
+            writer.writerow(["Epoch", "Day", "Entity 1", "Entity 2", "Interaction Type"])
+            for record in log.logs:
+                writer.writerow(
+                    str(record).split(','))  # Convert the record object to a string and split it into a list
+        elif log_type == "res":
+            writer.writerow(["Epoch", "Day", "Entity", "Resource Change", "Reason"])
+            for record in log.logs:
+                writer.writerow(
+                    str(record).split(','))  # Convert the record object to a string and split it into a list
+        elif log_type == "grp":
+            writer.writerow(["Epoch", "Day", "Group", "Entity", "Action", "Reason"])
+            for record in log.logs:
+                writer.writerow(str(record).split(','))  # Convert the record object to a string and split it into a list
+        elif log_type == "metrics":
+            log.write_to_csv(log_path, log_type + "_log.csv")
+
+import os
+
+# Specify the directory you want to combine scripts from
+directory = r'C:\Users\tingram\Desktop\Captains Log\UWYO\GIT\modeling-v2'
+
+# Specify the output file
+output_file = 'combined_script.py'
+
+# Get a list of all Python files in the directory
+python_files = [f for f in os.listdir(directory) if f.endswith('.py')]
+
+# Open the output file in write mode
+with open(output_file, 'w') as outfile:
+    for fname in python_files:
+        # Open each Python file in read mode
+        with open(os.path.join(directory, fname)) as infile:
+            # Write the contents of the Python file to the output file
+            outfile.write(infile.read())
+            # Write a newline character to separate scripts
+            outfile.write('\n')
+
+print(f"Combined scripts saved to {output_file}")
+import random
+import networkx as nx
+from agent_testing import Grid, SimpleAgent, run_simulation
+from abm import Simulation, Human, Zombie, NetworkManager, interact, update_status
+
+from config import grid_size, start_res, start_ttd, max_res_gain, ttd_rate, res_lose_rate, inf_rate, w, h, \
+    vi, vj, z, num_humans, num_zombies, epochs, days, hunger
+from surface_noise import generate_noise
+
+# Enhanced Grid class with noise and resource management
+class EnhancedGrid(Grid):
+    def __init__(self, width, height, num_resources):
+        super().__init__(width, height, num_resources)
+        self.surface = generate_noise(width, height, vi, vj, z)
+
+    def get_elevation(self, x, y):
+        return self.surface[x][y]
+
+# Enhanced Simulation class integrating logic from SimpleAgent
+class EnhancedSimulation(Simulation):
+    def __init__(self, num_humans, num_zombies, grid_size):
+        super().__init__(num_humans, num_zombies)
+        self.grid = EnhancedGrid(grid_size[0], grid_size[1], 50)  # Set resource count example
+        self.agents = [
+            SimpleAgent(i, self.grid, (random.randint(0, grid_size[0] - 1), random.randint(0, grid_size[1] - 1))) for i
+            in range(num_humans + num_zombies)]
+
+    def run_day(self):
+        # Implement day activities combining logic from both systems
+        for agent in self.agents:
+            agent.update()  # SimpleAgent logic for movement and resource collection
+            self.interact_agents(agent)  # Interaction logic potentially using network relationships
+
+    def interact_agents(self, agent):
+        # Enhanced interaction logic considering proximity and network
+        for other_agent in self.agents:
+            if agent != other_agent and agent.grid.is_adjacent(agent, other_agent):
+                interact(self, agent, other_agent)  # Utilize the interaction logic defined in abm.py
+
+# Main function to run the enhanced simulation
+def main_simulation():
+    # num_humans = 10
+    # num_zombies = 5
+    # grid_size = (20, 20)  # Example grid size
+    simulation = EnhancedSimulation(num_humans, num_zombies, grid_size)
+    for _ in range(100):  # Run for 100 days
+        simulation.run_day()
+
+if __name__ == "__main__":
+    main_simulation()
+
