@@ -72,7 +72,7 @@ def love_encounter(human, other):
     other.net['friend'][human.id] = human
 
     #  encounter and resource change logging placeholder
-    er = EncRecord(human, other, 'love')
+    er = EncRecord(human, other, 'love', human.loc['x'], human.loc['y'], human.loc['z'])
     el.logs.append(er)
 
     rr = ResRecord(human, amount, 'love')
@@ -89,7 +89,7 @@ def war_encounter(simulation, human, other):
     winner.xp['war'] += .5
     winner.enc['war'] += 1
 
-    er = EncRecord(human, other, 'war')
+    er = EncRecord(human, other, 'war', human.loc['x'], human.loc['y'], human.loc['z'])
     el.logs.append(er)
 
     winner.att['res'] += loser.att['res'] * (1 - loser_survival_rate)
@@ -130,7 +130,7 @@ def theft_encounter(human, other):
 
     # Update theft_xp and resources
     winner.xp['rob'] += .5
-    er = EncRecord(winner, loser, 'rob')
+    er = EncRecord(winner, loser, 'rob', winner.loc['x'], winner.loc['y'], winner.loc['z'])
     el.logs.append(er)
 
     winner.att['res'] += loser.att['res'] * (loser.xp['rob'] / winner.xp['rob'])
@@ -159,7 +159,7 @@ def theft_encounter(human, other):
 def kill_zombie_encounter(human, zombie):
     human.xp['war'] += .5
 
-    er = EncRecord(human, zombie, 'kill')
+    er = EncRecord(human, zombie, 'kill', human.loc['x'], human.loc['y'], human.loc['z'])
     el.logs.append(er)
 
     human.att['res'] += 2
@@ -185,7 +185,7 @@ def infect_human_encounter(human, zombie, simulation):
     gl.logs.append(gr)
 
     human.att['ttd'] = 10
-    er = EncRecord(zombie, human, 'infect')
+    er = EncRecord(zombie, human, 'infect', human.loc['x'], human.loc['y'], human.loc['z'])
     el.logs.append(er)
     zombie.att['ttd'] += 2
     zombie.enc['inf'] += 1
@@ -215,7 +215,7 @@ def human_to_human(simulation, human, other):
     elif outcome[0] == 'esc':
         human.xp['esc'] += .5
         other.xp['esc'] += .25
-        er = EncRecord(human, other, 'esc')
+        er = EncRecord(human, other, 'esc', human.loc['x'], human.loc['y'], human.loc['z'])
         el.logs.append(er)
 
 
@@ -234,7 +234,7 @@ def human_to_zombie(human, zombie, simulation):
         infect_human_encounter(human, zombie, simulation)
     elif outcome[0] == 'esc':
         human.xp['esc'] += .5
-        er = EncRecord(human, zombie, 'esc')
+        er = EncRecord(human, zombie, 'esc', human.loc['x'], human.loc['y'], human.loc['z'])
         el.logs.append(er)
 
 
@@ -245,5 +245,5 @@ def zombie_to_human(zombie, other):
         infect_human_encounter(other, zombie)
     else:
         other.xp['esc'] += .5
-        er = EncRecord(other, zombie, 'esc')
+        er = EncRecord(other, zombie, 'esc', other.loc['x'], other.loc['y'], other.loc['z'])
         el.logs.append(er)

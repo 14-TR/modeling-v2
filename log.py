@@ -4,7 +4,7 @@ from env import DayTracker, Epoch
 
 
 class EncRecord:
-    def __init__(self, ent, other, action):
+    def __init__(self, ent, other, action, new_loc_x, new_loc_y, new_loc_z):
         self.epoch = Epoch.get_current_epoch()
         self.day = DayTracker.get_current_day()
         self.ent_id = ent.id
@@ -12,12 +12,15 @@ class EncRecord:
         self.other_id = other.id
         # self.other_loc = other.loc
         self.action = action
+        self.new_loc_x = new_loc_x
+        self.new_loc_y = new_loc_y
+        self.new_loc_z = new_loc_z
 
     def __dict__(self):
-        return {'Epoch': self.epoch, 'Day': self.day, 'Entity 1': self.ent_id, 'Entity 2': self.other_id, 'Interaction Type': self.action}
+        return {'Epoch': self.epoch, 'Day': self.day, 'Entity 1': self.ent_id, 'Entity 2': self.other_id, 'Interaction Type': self.action, 'New X': self.new_loc_x, 'New Y': self.new_loc_y, 'New Z': self.new_loc_z}
 
     def __str__(self):
-        return f"{self.epoch},{self.day},{self.ent_id},{self.other_id},{self.action}"
+        return f"{self.epoch},{self.day},{self.ent_id},{self.other_id},{self.action},{self.new_loc_x},{self.new_loc_y},{self.new_loc_z}"
 
 
 class MoveRecord:
@@ -72,8 +75,8 @@ class EncLog:
             cls._instance.logs = []
         return cls._instance
 
-    def log(self, ent, other, action):
-        record = EncRecord(ent, other, action)
+    def log(self, ent, other, action, new_loc_x, new_loc_y, new_loc_z):
+        record = EncRecord(ent, other, action, new_loc_x, new_loc_y, new_loc_z)
         self.logs.append(record)
 
     def display_logs(self):

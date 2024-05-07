@@ -7,7 +7,6 @@ from events import interact
 from log import el
 
 
-
 def reset_entities():
     entities.clear()
 

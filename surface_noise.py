@@ -17,14 +17,15 @@ vi = vi
 vj = vj
 z = z
 w = w
-h =h
+h = h
+
 
 def generate_noise(w, h, vi, vj, z):
     noise = p.Perlin(14)
     grid = np.zeros((w, h))
     for i in range(w):
         for j in range(h):
-            grid[i, j] = noise.noise(i*vi, j*vj, z)
+            grid[i, j] = noise.noise(i * vi, j * vj, z)
     return grid
 
 # noise = p.Perlin(14)
@@ -42,4 +43,3 @@ def generate_noise(w, h, vi, vj, z):
 # plt.colorbar()
 # plt.title('2D Perlin Noise')
 # plt.show()
-
