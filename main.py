@@ -9,17 +9,9 @@ from sim import Simulation
 from log import ml, el, rl, gl
 from config import log_path
 from env import Grid
+from mapping import plot_surface, collect_enc_locations, generate_scatter_plot
 
 import matplotlib.pyplot as plt
-
-def plot_surface(surface):
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    X = np.arange(0, surface.shape[0])
-    Y = np.arange(0, surface.shape[1])
-    X, Y = np.meshgrid(X, Y)
-    ax.plot_surface(X, Y, surface, cmap='terrain')
-    plt.show()
 
 def main():
     # Initialize the simulation
