@@ -4,12 +4,14 @@ import numpy as np
 from datetime import datetime
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
+import seaborn as sns
+
 
 from sim import Simulation
 from log import ml, el, rl, gl
-from config import log_path
+from config import log_path, size, markers, colors, default_marker, default_color
 from env import Grid
-from mapping import plot_surface, collect_enc_locations, generate_scatter_plot
+
 
 import matplotlib.pyplot as plt
 
@@ -66,26 +68,54 @@ def main():
     # Group the DataFrame by the 'Interaction Type' column
     grouped = enc_df.groupby('Interaction Type')
 
-    # Create a scatter plot for each group
+    surf = sim.grid.surface
+
+    resource_point_list = sim.grid.get_xy_res_pnt()
+    resource_points_array = np.array(resource_point_list)
+
+    # Base map for resources and surface
+    def plot_base_map():
+        plt.imshow(surf, cmap='terrain', extent=[0.0, float(size), 0.0, float(size)], origin='lower')
+        plt.colorbar(label='Elevation')
+        plt.scatter(resource_points_array[:, 0], resource_points_array[:, 1], c='red', label='Resource Points', marker='x')
+
+    # Plotting encounters and creating heatmaps for each type
+    grouped = enc_df.groupby('Interaction Type')
     for name, group in grouped:
-        x_coords = group['New X'].values
-        y_coords = group['New Y'].values
-        z_coords = group['New Z'].values
+        plt.figure()
+        plot_base_map()
+        encounter_points = group[['New X', 'New Y']].dropna().to_numpy()
+        marker = markers.get(name, default_marker)
+        color = colors.get(name, default_color)
+        plt.scatter(encounter_points[:, 0], encounter_points[:, 1], marker=marker, color=color,
+                    label=f'{name} Encounters', alpha=0.6)
+        plt.title(f'Elevation Surface with Resource and {name} Points')
+        plt.xlabel('X Coordinate')
+        plt.ylabel('Y Coordinate')
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        plt.savefig(os.path.join(new_log_path, f"{name}_encounters.png"))
+        plt.close()
 
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x_coords, y_coords, z_coords)
+        # Generate heatmap for the current interaction type
+        heatmap_data = group.pivot_table(index='New Y', columns='New X', values='Epoch', aggfunc='count', fill_value=0)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(heatmap_data, cmap='viridis')
+        plt.title(f'Heatmap of {name} Encounters')
+        plt.xlabel('X Coordinate')
+        plt.ylabel('Y Coordinate')
+        heatmap_filename = os.path.join(new_log_path, f"{name}_heatmap.png")
+        plt.savefig(heatmap_filename)
+        plt.close()
 
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-        ax.set_title(f'Interaction Type: {name}')
+    plt.figure()
+    plot_base_map()
+    plt.title('Elevation Surface with Resource Points')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
+    plt.savefig(os.path.join(new_log_path, "elevation_surface_with_resources.png"))
+    plt.close()
 
-        plt.show()
-
-    # Plot the surface
-    grid = Grid((100, 100))  # Replace with your actual grid
-    plot_surface(grid.surface)
 
     return metrics_df, move_df, enc_df, res_df, grp_df
 

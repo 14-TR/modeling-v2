@@ -16,6 +16,7 @@ class Simulation:
 
     def __init__(self, humans=num_humans, zombies=num_zombies, e=epochs, d=days):
         self.grid = Grid(grid_size=grid_size)
+        self.res_pnts = self.grid.gen_res_pnt(4)
         self.surface = self.grid.surface
         self.humans = [Human() for _ in range(humans)]
         self.zombies = [Zombie() for _ in range(zombies)]

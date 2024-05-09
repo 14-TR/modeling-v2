@@ -66,39 +66,25 @@ class Grid:
     def get_xy_res_pnt(self):
         return [(x, y) for x, y in self.resource_points]
 
+    def calc_dist(self, x1, y1, x2, y2):
+        return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+
     def get_nearest_res_pnt(self, entity_x, entity_y):
-        # Initialize minimum distance and closest resource point variables
         min_distance = float('inf')
         closest_resource_point = None
-
-        # Iterate through each resource point to find the closest one
         for resource in self.resource_points:
-            # Calculate the Euclidean distance from the entity to this resource point
-            distance = self.calc_dist(entity_x, entity_y, resource['x'], resource['y'])
-
-            # If this resource point is closer than the previous closest, update min_distance and closest_resource_point
+            distance = self.calc_dist(entity_x, entity_y, resource[0], resource[1])
             if distance < min_distance:
                 min_distance = distance
                 closest_resource_point = resource
-
-        if closest_resource_point is None:
-            return (0, 0)  # Default value
-
-        return closest_resource_point['x'], closest_resource_point['y']
+        return closest_resource_point if closest_resource_point else (0, 0)
 
     def get_distance_to_nearest_res_pnt(self, entity_x, entity_y):
-        # Initialize minimum distance
         min_distance = float('inf')
-
-        # Iterate through each resource point to find the closest one
         for resource in self.resource_points:
-            # Calculate the Euclidean distance from the entity to this resource point
             distance = self.calc_dist(entity_x, entity_y, resource[0], resource[1])
-
-            # If this resource point is closer than the previous closest, update min_distance
             if distance < min_distance:
                 min_distance = distance
-
         return min_distance
 
     def get_nearest_prey(self, entity):
